@@ -333,7 +333,7 @@ def evaluate_structural_optimality(component_type, design_values):
         return make_rationality("R2", 60, f"缺少{component_type}评估所需的设计参数")
 
     # 加权计算
-    weighted = sum(s * w for s, _ in scores) / total_weight if total_weight > 0 else 0
+    weighted = sum(s for s, _ in scores) / len(scores)
     score = round(weighted * 100)
     level, _ = classify_rationality(score)
 

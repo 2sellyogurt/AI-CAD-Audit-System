@@ -82,8 +82,8 @@ def _compute_bounding_box(msp, blocks=None, margin: float = 0.05):
                 cx, cy = e.dxf.center[0], e.dxf.center[1]
                 mx = e.dxf.major_axis[0]
                 my = e.dxf.major_axis[1]
-                r_major = (_mx * _mx + _my * _my) ** 0.5 if (
-                    (_mx := mx), (_my := my)) else 1
+                _mx, _my = mx, my
+                r_major = (_mx * _mx + _my * _my) ** 0.5
                 _add_point(cx - r_major, cy - r_major)
                 _add_point(cx + r_major, cy + r_major)
             elif etype == "HATCH":

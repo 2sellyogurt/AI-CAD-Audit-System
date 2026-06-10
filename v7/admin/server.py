@@ -153,7 +153,6 @@ _PAGE_MODULES_CACHE = {}
 # ── 后台审查管线 ──
 
 def _run_review():
-    global _review_cache
     task_id = uuid.uuid4().hex[:8]
     with _cache_lock:
         _review_cache["taskId"] = task_id

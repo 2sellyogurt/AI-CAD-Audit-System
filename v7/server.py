@@ -23,7 +23,6 @@ _cache_lock = threading.Lock()
 
 def run_review_pipeline():
     """在后台线程中执行审查管线"""
-    global _cache
     task_id = uuid.uuid4().hex[:8]
     with _cache_lock:
         _cache["taskId"] = task_id
