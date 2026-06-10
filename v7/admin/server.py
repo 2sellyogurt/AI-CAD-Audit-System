@@ -375,7 +375,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             with open(PASSWORD_FILE, "w") as f:
                 f.write(_hash(pw))
             try: os.chmod(PASSWORD_FILE, 0o600)
-            except: pass
+            except OSError: pass
             return self._json(200, {"ok":True})
 
         if path == "/admin/api/review/start":

@@ -89,7 +89,7 @@ checkpoints:
 
 ```bash
 # Windows
-set ZHIPU_API_KEY=e28571d9dcf04e2f8ffc3aa63933e581.fhVTt5eESk767Fzn
+set ZHIPU_API_KEY=your_api_key_here
 
 # 或用其他Provider
 set DEEPSEEK_API_KEY=sk-xxx

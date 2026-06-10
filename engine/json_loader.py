@@ -215,9 +215,21 @@ class JsonLoader:
                 pd["discipline"] = self._infer_discipline(fn)
 
     def _infer_discipline(self, fn: str) -> str:
-        from .drawing_classifier import DrawingClassifier
-        classifier = DrawingClassifier()
-        return classifier.classify(fn)
+        import re
+        fn_lower = fn.lower()
+        patterns = {
+            "building": [r"jz", r"建施", r"建筑", r"a-", r"a_"],
+            "structure": [r"jg", r"结施", r"结构", r"g-", r"g_", r"s-", r"s_"],
+            "hvac": [r"nt", r"暖通", r"hvac", r"h-", r"h_"],
+            "plumbing": [r"ss", r"水施", r"给排水", r"p-", r"p_"],
+            "electrical": [r"ds", r"电施", r"电气", r"e-", r"e_"],
+            "fire": [r"xf", r"消防", r"火", r"f-", r"f_"],
+        }
+        for discipline, pats in patterns.items():
+            for pat in pats:
+                if re.search(pat, fn_lower):
+                    return discipline
+        return "unknown"
 
     def get_metadata_by_file(self, full_name: str) -> Dict[str, Any]:
         fn = os.path.basename(full_name)
@@ -231,27 +243,8 @@ class JsonLoader:
         return " ".join(lines)
 
     def get_dedup_engine(self) -> Any:
-        from engine.dedup_engine import DedupEngine
-        cache_key = self._json_dir
-        if cache_key in _dedup_cache:
-            return _dedup_cache[cache_key]
-
-        engine = DedupEngine()
-        for fn in self._files:
-            data = self._data.get(fn, {})
-            raw_texts = self.get_text_lines_by_file(fn)
-            metadata = data.get("metadata", {})
-            if not isinstance(metadata, dict):
-                metadata = {}
-            if "elevations" not in metadata and "elevations" in data:
-                metadata["elevations"] = data["elevations"]
-            if "axes" not in metadata and "axes" in data:
-                metadata["axes"] = data["axes"]
-            readable = self._readable_names.get(fn, fn)
-            engine.register(fn, readable, raw_texts, metadata)
-
-        _dedup_cache[cache_key] = engine
-        return engine
+        raise NotImplementedError("DedupEngine has been moved to v7.error_pool.pool, use v7 ProblemPool instead")
+        return None
 
     def get_dedup_summary(self) -> Dict[str, Any]:
         engine = self.get_dedup_engine()
