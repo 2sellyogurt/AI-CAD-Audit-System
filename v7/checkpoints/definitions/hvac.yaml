@@ -1,0 +1,461 @@
+discipline: hvac
+description: 暖通专业检查点 - 20个高频检查项
+
+checkpoints:
+
+  # ============================================================================
+  # HVAC-001 ~ HVAC-020: 暖通专业20个高频检查项
+  # 引用标准: GB51251-2017      建筑防烟排烟系统技术标准
+  #           GB50736-2012      民用建筑供暖通风与空气调节设计规范
+  #           GB50738-2011      通风与空调工程施工规范
+  #           GB50016-2014(2018) 建筑设计防火规范
+  #           GB50118-2010      民用建筑隔声设计规范
+  # ============================================================================
+
+  # ---------------------------------------------------------------------------
+  # 1. 防烟分区长边最大长度检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-001
+    name: 防烟分区长边最大长度检查
+    description: 检查防烟分区长边最大长度是否符合空间净高对应的限值要求
+    discipline: hvac
+    check_type: dimension_max
+    route: dual
+    severity: A
+    priority: 100
+    standard_code: GB51251-2017
+    standard_clause: "4.2.4"
+    clause_text: "公共建筑、工业建筑防烟分区的最大允许面积及其长边最大允许长度应符合表4.2.4的规定，空间净高≤3.0m时，长边最大允许长度为24m；3.0m<净高≤6.0m时，长边最大允许长度为36m；净高>6.0m时，长边最大允许长度为60m"
+    target_object: ["防烟分区", "挡烟垂壁", "排烟区域"]
+    target_property: "防烟分区长边长度"
+    operator: "<="
+    limit_value: 60
+    unit: m
+    keywords: ["防烟分区", "长边", "净高", "挡烟垂壁"]
+    suggestion_template: "防烟分区长边长度超出规范限值，请按GB51251-2017 4.2.4条重新划分防烟分区"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 2. 自然排烟窗有效面积检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-002
+    name: 自然排烟窗有效面积检查
+    description: 检查自然排烟窗有效面积是否不小于房间建筑面积的2%
+    discipline: hvac
+    check_type: dimension_min
+    route: dual
+    severity: A
+    priority: 99
+    standard_code: GB51251-2017
+    standard_clause: "4.6.3"
+    clause_text: "建筑空间净高小于或等于6m的场所，其排烟量应按不小于60m³/(h·㎡)计算，且取值不小于15000m³/h，或设置有效面积不小于该房间建筑面积2%的自然排烟窗(口)"
+    target_object: ["自然排烟窗", "排烟窗", "可开启外窗"]
+    target_property: "有效排烟面积"
+    operator: ">="
+    limit_value: 2
+    unit: "%"
+    keywords: ["自然排烟", "排烟窗", "开窗面积", "有效面积"]
+    suggestion_template: "自然排烟窗有效面积不满足≥房间建筑面积2%的要求，请按GB51251-2017 4.6.3条增加开窗面积"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 3. 机械加压送风量检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-003
+    name: 机械加压送风量检查
+    description: 检查防烟楼梯间及前室机械加压送风量是否满足规范要求
+    discipline: hvac
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 98
+    standard_code: GB51251-2017
+    standard_clause: "3.4.2"
+    clause_text: "防烟楼梯间、前室的机械加压送风量应按本标准第3.4.5条~第3.4.8条的规定计算确定，且不应小于表3.4.2-1~表3.4.2-4中的数值"
+    target_object: ["加压送风机", "送风系统", "防烟楼梯间"]
+    target_property: "机械加压送风量"
+    operator: ">="
+    limit_value: 25000
+    unit: "m³/h"
+    keywords: ["加压送风", "送风量", "防烟楼梯间", "前室"]
+    suggestion_template: "机械加压送风量不满足规范要求，请按GB51251-2017 3.4.2条重新计算并调整风机选型"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 4. 送风口距疏散门距离检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-004
+    name: 送风口距疏散门距离检查
+    description: 检查加压送风口是否设置在被门挡住的部位
+    discipline: hvac
+    check_type: dimension_min
+    route: visual
+    severity: A
+    priority: 97
+    standard_code: GB51251-2017
+    standard_clause: "3.3.6"
+    clause_text: "加压送风口不宜设置在被门挡住的部位；前室应每层设一个常闭式加压送风口"
+    target_object: ["加压送风口", "送风口", "前室送风口"]
+    target_property: "送风口与疏散门距离"
+    operator: ">="
+    limit_value: 500
+    unit: mm
+    keywords: ["送风口", "疏散门", "前室", "加压送风"]
+    suggestion_template: "加压送风口设置位置不当，可能被门扇遮挡影响送风效果，请按GB51251-2017 3.3.6条调整送风口位置"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 5. 风管法兰间距检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-005
+    name: 风管法兰间距检查
+    description: 检查风管法兰连接螺栓间距是否符合规范要求
+    discipline: hvac
+    check_type: dimension_max
+    route: text
+    severity: B
+    priority: 85
+    standard_code: GB50738-2011
+    standard_clause: "4.1.6"
+    clause_text: "风管法兰连接螺栓间距：低压风管≤150mm，中压风管≤100mm，高压风管≤80mm，且螺栓孔位置应在法兰中心"
+    target_object: ["风管", "风管法兰", "金属风管"]
+    target_property: "法兰螺栓间距"
+    operator: "<="
+    limit_value: 150
+    unit: mm
+    keywords: ["法兰", "螺栓间距", "风管连接"]
+    suggestion_template: "风管法兰螺栓间距超出规范限值，请按GB50738-2011 4.1.6条调整，低压风管≤150mm"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 6. 空调冷热水供回水温差检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-006
+    name: 空调冷热水供回水温差检查
+    description: 检查空调冷水供回水温差是否满足不应小于5℃的要求
+    discipline: hvac
+    check_type: dimension_min
+    route: text
+    severity: C
+    priority: 60
+    standard_code: GB50736-2012
+    standard_clause: "8.5.1"
+    clause_text: "采用冷水机组直接供冷时，空调冷水供水温度不宜低于5℃，空调冷水供回水温差不应小于5℃"
+    target_object: ["冷水机组", "空调水系统", "供回水管"]
+    target_property: "供回水温差"
+    operator: ">="
+    limit_value: 5
+    unit: "℃"
+    keywords: ["供回水温差", "空调冷水", "冷水机组"]
+    suggestion_template: "空调冷水供回水温差小于5℃，不满足GB50736-2012 8.5.1条要求，请调整系统设计参数"
+    applicable_building_types: ["公共建筑", "商业建筑", "办公建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 7. 排烟口与附近安全出口距离检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-007
+    name: 排烟口与附近安全出口距离检查
+    description: 检查排烟口与附近安全出口的水平距离是否满足规范要求
+    discipline: hvac
+    check_type: dimension_min
+    route: visual
+    severity: A
+    priority: 96
+    standard_code: GB51251-2017
+    standard_clause: "4.4.12"
+    clause_text: "排烟口的设置宜使烟流方向与人员疏散方向相反，排烟口与附近安全出口相邻边缘之间的水平距离不应小于1.5m"
+    target_object: ["排烟口", "排烟阀", "排烟风口"]
+    target_property: "与安全出口水平距离"
+    operator: ">="
+    limit_value: 1500
+    unit: mm
+    keywords: ["排烟口", "安全出口", "疏散门", "水平距离"]
+    suggestion_template: "排烟口与安全出口距离不足1.5m，请按GB51251-2017 4.4.12条调整排烟口位置"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 8. 新风量最小值检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-008
+    name: 新风量最小值检查
+    description: 检查公共建筑主要房间每人所需最小新风量是否满足规范要求
+    discipline: hvac
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 84
+    standard_code: GB50736-2012
+    standard_clause: "3.0.6"
+    clause_text: "公共建筑主要房间每人所需最小新风量应符合表3.0.6-1规定，办公室≥30m³/(h·人)，会议室≥30m³/(h·人)"
+    target_object: ["新风系统", "新风机组", "新风管"]
+    target_property: "人均新风量"
+    operator: ">="
+    limit_value: 30
+    unit: "m³/(h·人)"
+    keywords: ["新风量", "最小新风量", "新风系统"]
+    suggestion_template: "人均新风量不满足GB50736-2012 3.0.6条的最小新风量要求，请增大新风系统容量"
+    applicable_building_types: ["公共建筑", "办公建筑", "教育建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 9. 风管穿越防火墙防火阀设置检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-009
+    name: 风管穿越防火墙防火阀设置检查
+    description: 检查风管穿越防火墙等部位是否设置了70℃防火阀
+    discipline: hvac
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 95
+    standard_code: GB50016-2014(2018)
+    standard_clause: "9.3.11"
+    clause_text: "通风、空气调节系统的风管在穿越防火分区处、穿越通风空调机房隔墙和楼板处、穿越重要场所隔墙和楼板处、穿越变形缝两侧、竖向风管与水平风管交接处应设置公称动作温度为70℃的防火阀"
+    target_object: ["风管", "防火阀", "空调风管"]
+    target_property: "防火阀设置"
+    keywords: ["防火阀", "防火墙", "防火分区", "70℃"]
+    suggestion_template: "风管穿越防火墙/防火分区处未设置70℃防火阀，请按GB50016-2014 9.3.11条补设防火阀"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 10. 排烟风机风量裕量检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-010
+    name: 排烟风机风量裕量检查
+    description: 检查排烟风机设计风量是否不小于计算风量的1.2倍
+    discipline: hvac
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 83
+    standard_code: GB51251-2017
+    standard_clause: "5.5.1"
+    clause_text: "排烟风机宜采用离心式或轴流式排烟风机，其设计风量不应小于计算风量的1.2倍"
+    target_object: ["排烟风机", "排烟系统", "风机"]
+    target_property: "排烟风机风量裕量"
+    operator: ">="
+    limit_value: 1.2
+    unit: ""
+    keywords: ["排烟风机", "风量", "裕量", "1.2倍"]
+    suggestion_template: "排烟风机设计风量裕量不足1.2倍，请按GB51251-2017 5.5.1条重新选型"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 11. 空调末端设备噪声限值检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-011
+    name: 空调末端设备噪声限值检查
+    description: 检查空调末端设备噪声值是否超过室内允许噪声级
+    discipline: hvac
+    check_type: dimension_max
+    route: text
+    severity: C
+    priority: 55
+    standard_code: GB50118-2010
+    standard_clause: "4.1.1"
+    clause_text: "室内允许噪声级应符合GB50118的规定，空调末端设备噪声不宜超过室内允许噪声级"
+    target_object: ["空调末端", "风机盘管", "空调箱"]
+    target_property: "噪声值"
+    operator: "<="
+    limit_value: 45
+    unit: "dB(A)"
+    keywords: ["噪声", "空调末端", "风机盘管", "噪声限值"]
+    suggestion_template: "空调末端设备噪声值可能超过室内允许噪声级，请按GB50118-2010 4.1.1条选用低噪声设备或采取消声措施"
+    applicable_building_types: ["公共建筑", "居住建筑", "医疗建筑", "教育建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 12. 冷却塔循环水量标注检查 (D级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-012
+    name: 冷却塔循环水量标注检查
+    description: 检查冷却塔循环水量是否在设计图中正确标注
+    discipline: hvac
+    check_type: text_presence
+    route: text
+    severity: D
+    priority: 40
+    standard_code: GB50736-2012
+    standard_clause: "8.6.2"
+    clause_text: "冷却塔的选型应根据循环水量、进出水温度、湿球温度等参数确定，循环水量应在设计图中标注"
+    target_object: ["冷却塔", "冷却水系统"]
+    target_property: "循环水量标注"
+    keywords: ["冷却塔", "循环水量", "冷却水"]
+    suggestion_template: "冷却塔循环水量未在设计图中标注，请按GB50736-2012 8.6.2条补标循环水量参数"
+    applicable_building_types: ["公共建筑", "商业建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 13. 供暖热负荷计算值标注检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-013
+    name: 供暖热负荷计算值标注检查
+    description: 检查供暖热负荷计算值是否在设计图中正确标注
+    discipline: hvac
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 80
+    standard_code: GB50736-2012
+    standard_clause: "5.2.1"
+    clause_text: "供暖系统的热负荷应根据建筑物得失热量的计算确定，设计文件中应标注热负荷计算值"
+    target_object: ["供暖系统", "散热器", "地暖系统"]
+    target_property: "热负荷计算值标注"
+    keywords: ["供暖", "热负荷", "计算值", "标注"]
+    suggestion_template: "供暖热负荷计算值未在设计图中标注，请按GB50736-2012 5.2.1条补标计算值"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 14. 风管保温层厚度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-014
+    name: 风管保温层厚度检查
+    description: 检查空调风管保温层厚度是否满足防结露和节能要求
+    discipline: hvac
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 78
+    standard_code: GB50736-2012
+    standard_clause: "11.1.5"
+    clause_text: "空调风管绝热层的最小热阻不应小于0.74m²·K/W，保温层厚度应根据防结露和经济计算确定"
+    target_object: ["空调风管", "送风管", "新风管"]
+    target_property: "保温层厚度"
+    operator: ">="
+    limit_value: 20
+    unit: mm
+    keywords: ["保温", "绝热", "风管保温", "防结露"]
+    suggestion_template: "风管保温层厚度不满足防结露要求，请按GB50736-2012 11.1.5条核算并增加保温层厚度"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 15. 通风设备基础尺寸检查 (D级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-015
+    name: 通风设备基础尺寸检查
+    description: 检查通风设备基础尺寸是否与设备安装要求匹配
+    discipline: hvac
+    check_type: dimension_min
+    route: text
+    severity: D
+    priority: 35
+    standard_code: GB50738-2011
+    standard_clause: "5.2.3"
+    clause_text: "通风与空调设备的安装基础应满足设备安装要求，基础尺寸和设备安装位置应符合设计要求"
+    target_object: ["通风机", "风机基础", "空调设备基础"]
+    target_property: "基础尺寸"
+    operator: ">="
+    limit_value: 0
+    unit: mm
+    keywords: ["基础", "设备基础", "通风设备"]
+    suggestion_template: "通风设备基础尺寸标注不完整或与设备安装要求不匹配，请按GB50738-2011 5.2.3条复核并补标"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 16. 多联机冷媒管等效长度检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-016
+    name: 多联机冷媒管等效长度检查
+    description: 检查多联机系统冷媒管等效长度是否在产品允许范围内
+    discipline: hvac
+    check_type: dimension_max
+    route: text
+    severity: C
+    priority: 50
+    standard_code: GB50736-2012
+    standard_clause: "7.3.8"
+    clause_text: "多联机空调系统冷媒管等效长度不宜超过产品技术参数允许的最大值，且不宜超过175m"
+    target_object: ["多联机", "VRF系统", "冷媒管"]
+    target_property: "冷媒管等效长度"
+    operator: "<="
+    limit_value: 175
+    unit: m
+    keywords: ["多联机", "冷媒管", "等效长度", "VRF"]
+    suggestion_template: "多联机冷媒管等效长度超出产品允许范围，请按GB50736-2012 7.3.8条重新布置室内外机位置"
+    applicable_building_types: ["公共建筑", "办公建筑", "商业建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 17. 厨房排风量最小换气次数检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-017
+    name: 厨房排风量最小换气次数检查
+    description: 检查厨房排风量是否满足最小换气次数要求
+    discipline: hvac
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 75
+    standard_code: GB50736-2012
+    standard_clause: "6.3.5"
+    clause_text: "厨房通风应保持负压，排风量应按换气次数计算：中餐厨房≥40次/h，西餐厨房≥30次/h，职工餐厅厨房≥25次/h"
+    target_object: ["厨房排风", "排油烟系统", "厨房通风"]
+    target_property: "排风量换气次数"
+    operator: ">="
+    limit_value: 40
+    unit: "次/h"
+    keywords: ["厨房", "排风", "换气次数", "排油烟"]
+    suggestion_template: "厨房排风量不满足最小换气次数要求，请按GB50736-2012 6.3.5条增大排风系统容量"
+    applicable_building_types: ["公共建筑", "商业建筑", "餐饮建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 18. 防排烟风管耐火极限检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-018
+    name: 防排烟风管耐火极限检查
+    description: 检查防排烟风管的耐火极限是否满足规范要求
+    discipline: hvac
+    check_type: fire_rating
+    route: text
+    severity: A
+    priority: 94
+    standard_code: GB51251-2017
+    standard_clause: "4.4.8"
+    clause_text: "排烟风管应按设计要求的耐火极限设置，水平设置的排烟管道应设置在吊顶内，其耐火极限不应低于0.50h；当确有困难时，可直接设置在室内，但管道的耐火极限不应小于1.00h"
+    target_object: ["排烟风管", "防排烟管道", "排烟管"]
+    target_property: "风管耐火极限"
+    operator: ">="
+    limit_value: 0.5
+    unit: h
+    keywords: ["耐火极限", "排烟风管", "防火包裹"]
+    suggestion_template: "防排烟风管耐火极限不满足规范要求，请按GB51251-2017 4.4.8条采取防火包裹或选用耐火风管"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 19. 送风井道最小截面检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-019
+    name: 送风井道最小截面检查
+    description: 检查机械加压送风井道的最小截面是否满足送风量要求
+    discipline: hvac
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 82
+    standard_code: GB51251-2017
+    standard_clause: "3.3.3"
+    clause_text: "机械加压送风系统应采用管道送风，且不应采用土建风道；当采用金属风道时风速不应大于20m/s，非金属风道时风速不应大于15m/s"
+    target_object: ["送风井道", "加压送风管", "风管截面"]
+    target_property: "风道最小截面"
+    operator: ">="
+    limit_value: 0
+    unit: "m²"
+    keywords: ["送风井道", "风管截面", "送风管"]
+    suggestion_template: "送风井道截面不足以满足设计送风量所需的风速要求，请按GB51251-2017 3.3.3条复核并加大井道截面"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 20. 空调水系统膨胀罐设置检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: HVAC-020
+    name: 空调水系统膨胀罐设置检查
+    description: 检查空调闭式水系统是否设置了膨胀罐（膨胀水箱）
+    discipline: hvac
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 45
+    standard_code: GB50736-2012
+    standard_clause: "8.5.5"
+    clause_text: "空调闭式水系统应设置膨胀装置，膨胀罐或膨胀水箱的容积应根据水系统总水容和设计水温变化幅度计算确定"
+    target_object: ["空调水系统", "膨胀罐", "膨胀水箱"]
+    target_property: "膨胀罐设置"
+    keywords: ["膨胀罐", "膨胀水箱", "空调水系统", "定压"]
+    suggestion_template: "空调闭式水系统未设置膨胀罐（膨胀水箱），请按GB50736-2012 8.5.5条增设并计算容积"
+    applicable_building_types: ["全部"]

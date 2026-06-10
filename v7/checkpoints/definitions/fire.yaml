@@ -1,0 +1,443 @@
+discipline: fire
+description: 消防专业检查点 - 20个高频检查项
+
+checkpoints:
+
+  # ============================================================================
+  # FIRE-001 ~ FIRE-020: 消防专业20个高频检查项
+  # 引用标准: GB50016-2014(2018) 建筑设计防火规范
+  #           GB50116-2013      火灾自动报警系统设计规范
+  # ============================================================================
+
+  # ---------------------------------------------------------------------------
+  # 1. 防火分区最大允许面积检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-001
+    name: 防火分区最大允许面积检查
+    description: 检查防火分区面积是否超过相应耐火等级和建筑类型对应的最大允许值
+    discipline: fire
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 100
+    standard_code: GB50016-2014(2018)
+    standard_clause: "5.3.1"
+    clause_text: "不同耐火等级建筑的防火分区最大允许建筑面积应符合表5.3.1的规定：一、二级耐火等级单多层建筑最大允许建筑面积2500㎡，高层建筑1500㎡，地下或半地下建筑500㎡"
+    target_object: ["防火分区", "防火隔间", "建筑分区"]
+    target_property: "防火分区面积"
+    operator: "<="
+    limit_value: 2500
+    unit: "㎡"
+    keywords: ["防火分区", "分区面积", "防火隔断"]
+    suggestion_template: "防火分区面积超出最大允许值，请按GB50016-2014 5.3.1条重新划分防火分区或提高耐火等级"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 2. 疏散走道最小净宽度检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-002
+    name: 疏散走道最小净宽度检查
+    description: 检查疏散走道的最小净宽度是否满足规范要求
+    discipline: fire
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 99
+    standard_code: GB50016-2014(2018)
+    standard_clause: "5.5.18"
+    clause_text: "疏散走道的净宽度：高层医疗建筑单面布房不应小于1.40m，双面布房不应小于1.50m；其他高层建筑单面布房不应小于1.30m，双面布房不应小于1.40m"
+    target_object: ["疏散走道", "走道", "疏散通道"]
+    target_property: "净宽度"
+    operator: ">="
+    limit_value: 1.30
+    unit: m
+    keywords: ["疏散走道", "净宽", "疏散通道", "走道宽度"]
+    suggestion_template: "疏散走道净宽度不满足规范要求，请按GB50016-2014 5.5.18条调整（高层医疗≥1.4m，其他高层≥1.3m）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 3. 房间内最远点到疏散门距离检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-003
+    name: 房间内最远点到疏散门距离检查
+    description: 检查房间内最远点至疏散门的直线距离是否超过规范限值
+    discipline: fire
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 98
+    standard_code: GB50016-2014(2018)
+    standard_clause: "5.5.17"
+    clause_text: "房间内最远点至疏散门的直线距离不应大于15m；当设置自动喷水灭火系统时，可增加25%"
+    target_object: ["房间", "疏散门", "房间疏散"]
+    target_property: "最远点到疏散门距离"
+    operator: "<="
+    limit_value: 15
+    unit: m
+    keywords: ["疏散距离", "最远点", "疏散门", "房间疏散"]
+    suggestion_template: "房间内最远点到疏散门距离超过15m限值，请按GB50016-2014 5.5.17条增设疏散门或调整房间布局"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 4. 防火门耐火等级标注检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-004
+    name: 防火门耐火等级标注检查
+    description: 检查防火门的耐火等级标注是否与设计要求和规范规定一致
+    discipline: fire
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 97
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.1.5"
+    clause_text: "防火门的耐火等级应根据其在建筑中的设置部位确定：防火墙上的防火门应为甲级（≥1.5h），疏散楼梯间及其前室的防火门应为乙级（≥1.0h），管道井壁上的防火门应为丙级（≥0.5h）"
+    target_object: ["防火门", "甲级防火门", "乙级防火门"]
+    target_property: "耐火等级标注"
+    keywords: ["防火门", "耐火等级", "甲级", "乙级", "丙级"]
+    suggestion_template: "防火门耐火等级标注不完整或不符合规范要求，请按GB50016-2014 6.1.5条核对并正确标注（甲级≥1.5h，乙级≥1.0h，丙级≥0.5h）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 5. 防火墙耐火极限检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-005
+    name: 防火墙耐火极限检查
+    description: 检查防火墙的耐火极限是否满足规范要求
+    discipline: fire
+    check_type: fire_rating
+    route: text
+    severity: A
+    priority: 96
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.1.1"
+    clause_text: "防火墙的耐火极限不应低于3.0h；当为甲、乙类厂房和甲、乙、丙类仓库时，防火墙的耐火极限不应低于4.0h"
+    target_object: ["防火墙", "防火隔墙"]
+    target_property: "耐火极限"
+    operator: ">="
+    limit_value: 3.0
+    unit: h
+    keywords: ["防火墙", "耐火极限", "防火隔墙"]
+    suggestion_template: "防火墙耐火极限不满足规范要求，请按GB50016-2014 6.1.1条调整（一般建筑≥3.0h，甲乙类厂房/仓库≥4.0h）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 6. 疏散楼梯间形式要求检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-006
+    name: 疏散楼梯间形式要求检查
+    description: 检查建筑所需的疏散楼梯间形式是否符合规范规定
+    discipline: fire
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 95
+    standard_code: GB50016-2014(2018)
+    standard_clause: "5.5.12"
+    clause_text: "一类高层公共建筑和建筑高度大于32m的二类高层公共建筑，其疏散楼梯应采用防烟楼梯间；裙房和建筑高度不大于32m的二类高层公共建筑，应采用封闭楼梯间"
+    target_object: ["疏散楼梯", "防烟楼梯间", "封闭楼梯间"]
+    target_property: "楼梯间形式"
+    keywords: ["疏散楼梯", "防烟楼梯间", "封闭楼梯间", "楼梯形式"]
+    suggestion_template: "疏散楼梯间形式不满足规范要求，请按GB50016-2014 5.5.12条根据建筑类型和高度采用防烟楼梯间或封闭楼梯间"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 7. 消防车道宽度检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-007
+    name: 消防车道宽度检查
+    description: 检查消防车道的净宽度和净空高度是否满足消防车通行要求
+    discipline: fire
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 94
+    standard_code: GB50016-2014(2018)
+    standard_clause: "7.1.8"
+    clause_text: "消防车道的净宽度和净空高度均不应小于4.0m；消防车道靠建筑外墙一侧的边缘距离建筑外墙不宜小于5.0m"
+    target_object: ["消防车道", "消防车通道", "消防通道"]
+    target_property: "车道净宽度"
+    operator: ">="
+    limit_value: 4.0
+    unit: m
+    keywords: ["消防车道", "净宽", "净高", "消防通道"]
+    suggestion_template: "消防车道净宽度/净空高度不满足≥4.0m的要求，请按GB50016-2014 7.1.8条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 8. 消防登高面宽度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-008
+    name: 消防登高面宽度检查
+    description: 检查高层建筑消防登高操作场地的宽度是否满足规范要求
+    discipline: fire
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 88
+    standard_code: GB50016-2014(2018)
+    standard_clause: "7.2.1"
+    clause_text: "高层建筑应至少沿一个长边或周边长度的1/4且不小于一个长边长度的底边连续布置消防车登高操作场地，该范围内的裙房进深不应大于4m；场地的长度和宽度分别不应小于20m和10m"
+    target_object: ["消防登高面", "登高操作场地", "消防登高场地"]
+    target_property: "登高面宽度"
+    operator: ">="
+    limit_value: 10
+    unit: m
+    keywords: ["登高面", "登高操作场地", "消防登高", "宽度"]
+    suggestion_template: "消防登高操作场地宽度不满足≥10m的要求，请按GB50016-2014 7.2.1条调整"
+    applicable_building_types: ["高层建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 9. 防火卷帘宽度限值检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-009
+    name: 防火卷帘宽度限值检查
+    description: 检查防火卷帘的宽度是否超过规范规定的最大限值
+    discipline: fire
+    check_type: dimension_max
+    route: text
+    severity: B
+    priority: 85
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.5.3"
+    clause_text: "防火卷帘的宽度应符合：除中庭外，当防火分隔部位的宽度≤30m时，防火卷帘的宽度不应大于10m；当防火分隔部位的宽度＞30m时，防火卷帘的宽度不应大于该部位宽度的1/3，且不应大于20m"
+    target_object: ["防火卷帘", "防火卷帘门"]
+    target_property: "卷帘宽度"
+    operator: "<="
+    limit_value: 20
+    unit: m
+    keywords: ["防火卷帘", "卷帘宽度", "防火分隔"]
+    suggestion_template: "防火卷帘宽度超出规范限值，请按GB50016-2014 6.5.3条调整（分隔宽度≤30m时卷帘≤10m，>30m时卷帘≤1/3且≤20m）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 10. 自动喷水灭火系统设置场所检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-010
+    name: 自动喷水灭火系统设置场所检查
+    description: 检查规定场所是否按要求设置了自动喷水灭火系统
+    discipline: fire
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 93
+    standard_code: GB50016-2014(2018)
+    standard_clause: "8.3.3"
+    clause_text: "以下场所应设置自动喷水灭火系统：一类高层公共建筑（除游泳池、溜冰场外）及其地下、半地下室；二类高层公共建筑及其地下、半地下室的公共活动用房、走道、办公室、旅馆的客房、自动扶梯底部等"
+    target_object: ["自动喷水灭火系统", "喷淋系统", "自动喷淋"]
+    target_property: "系统设置"
+    keywords: ["自动喷水", "喷淋", "自动灭火", "自动喷淋"]
+    suggestion_template: "规定场所未设置自动喷水灭火系统，请按GB50016-2014 8.3.3条的要求增设"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 11. 室内消火栓设置场所检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-011
+    name: 室内消火栓设置场所检查
+    description: 检查规定场所是否按要求设置了室内消火栓系统
+    discipline: fire
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 92
+    standard_code: GB50016-2014(2018)
+    standard_clause: "8.2.1"
+    clause_text: "下列建筑或场所应设置室内消火栓系统：建筑占地面积大于300㎡的厂房和仓库；高层公共建筑和建筑高度大于21m的住宅建筑；体积大于5000m³的车站、码头、机场的候车（船、机）建筑等"
+    target_object: ["室内消火栓", "消火栓系统", "消防栓"]
+    target_property: "消火栓设置"
+    keywords: ["消火栓", "室内消火栓", "消防栓", "消防给水"]
+    suggestion_template: "规定场所未设置室内消火栓系统，请按GB50016-2014 8.2.1条的要求增设"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 12. 排烟设施设置场所检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-012
+    name: 排烟设施设置场所检查
+    description: 检查规定场所是否按要求设置了排烟设施
+    discipline: fire
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 91
+    standard_code: GB50016-2014(2018)
+    standard_clause: "8.5.3"
+    clause_text: "民用建筑的下列场所应设置排烟设施：设置在一、二、三层且房间建筑面积大于100㎡的歌舞娱乐放映游艺场所；中庭；公共建筑内建筑面积大于100㎡且经常有人停留的地上房间等"
+    target_object: ["排烟设施", "排烟系统", "机械排烟"]
+    target_property: "排烟设施设置"
+    keywords: ["排烟", "排烟设施", "机械排烟", "自然排烟"]
+    suggestion_template: "规定场所未设置排烟设施，请按GB50016-2014 8.5.3条的要求增设机械排烟或自然排烟设施"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 13. 疏散门开启方向检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-013
+    name: 疏散门开启方向检查
+    description: 检查疏散门的开启方向是否朝向疏散方向
+    discipline: fire
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 86
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.4.11"
+    clause_text: "疏散门应向疏散方向开启，且不应采用推拉门、卷帘门、吊门、转门和折叠门；人数不超过60人且每樘门的平均疏散人数不超过30人的房间，其疏散门的开启方向不限"
+    target_object: ["疏散门", "安全出口门", "防火门"]
+    target_property: "开启方向"
+    keywords: ["疏散门", "开启方向", "安全出口", "疏散方向"]
+    suggestion_template: "疏散门未向疏散方向开启，请按GB50016-2014 6.4.11条调整门的开启方向"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 14. 避难层间距检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-014
+    name: 避难层间距检查
+    description: 检查超高层建筑避难层的设置间距是否符合规范要求
+    discipline: fire
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 90
+    standard_code: GB50016-2014(2018)
+    standard_clause: "5.5.23"
+    clause_text: "建筑高度大于100m的公共建筑，应设置避难层（间）。第一个避难层（间）的楼地面至灭火救援场地地面的高度不应大于50m，两个避难层（间）之间的高度差不宜大于50m"
+    target_object: ["避难层", "避难间", "超高层"]
+    target_property: "避难层间距"
+    operator: "<="
+    limit_value: 50
+    unit: m
+    keywords: ["避难层", "避难间", "超高层", "高度差"]
+    suggestion_template: "避难层间距超过50m限值，请按GB50016-2014 5.5.23条增设避难层（首层距地面≤50m，层间高差≤50m）"
+    applicable_building_types: ["超高层建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 15. 管道井防火封堵检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-015
+    name: 管道井防火封堵检查
+    description: 检查管道井在楼层处是否按要求进行了防火封堵
+    discipline: fire
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 84
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.2.9"
+    clause_text: "建筑内的电缆井、管道井应在每层楼板处采用不低于楼板耐火极限的不燃材料或防火封堵材料封堵；井壁上的检查门应采用丙级防火门"
+    target_object: ["管道井", "电缆井", "管井"]
+    target_property: "防火封堵"
+    keywords: ["管道井", "防火封堵", "管井封堵", "电缆井"]
+    suggestion_template: "管道井在楼层处未按要求进行防火封堵，请按GB50016-2014 6.2.9条采用不燃材料或防火封堵材料封堵"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 16. 消防救援窗设置检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-016
+    name: 消防救援窗设置检查
+    description: 检查消防救援窗的设置位置和尺寸是否符合规范要求
+    discipline: fire
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 82
+    standard_code: GB50016-2014(2018)
+    standard_clause: "7.2.4"
+    clause_text: "厂房、仓库、公共建筑的外墙应在每层的适当位置设置可供消防救援人员进入的窗口，窗口的净高度和净宽度均不应小于1.0m，下沿距室内地面不宜大于1.2m，间距不宜大于20m"
+    target_object: ["消防救援窗", "救援窗口", "消防破拆口"]
+    target_property: "救援窗尺寸"
+    operator: ">="
+    limit_value: 1.0
+    unit: m
+    keywords: ["救援窗", "消防救援", "救援窗口", "消防破拆"]
+    suggestion_template: "消防救援窗尺寸或设置位置不满足规范要求，请按GB50016-2014 7.2.4条调整（净高×净宽≥1.0m×1.0m，间距≤20m）"
+    applicable_building_types: ["厂房", "仓库", "公共建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 17. 防火间距最小值检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-017
+    name: 防火间距最小值检查
+    description: 检查建筑物之间的防火间距是否满足规范要求的最小值
+    discipline: fire
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 89
+    standard_code: GB50016-2014(2018)
+    standard_clause: "5.2.2"
+    clause_text: "民用建筑之间的防火间距：一、二级耐火等级高层建筑之间不应小于13m；一、二级耐火等级高层建筑与一、二级耐火等级裙房之间不应小于9m；一、二级耐火等级裙房之间不应小于6m"
+    target_object: ["建筑间距", "相邻建筑", "防火间距"]
+    target_property: "防火间距"
+    operator: ">="
+    limit_value: 13
+    unit: m
+    keywords: ["防火间距", "建筑间距", "相邻建筑", "防火距离"]
+    suggestion_template: "建筑物之间的防火间距不满足规范要求，请按GB50016-2014 5.2.2条调整（高层间≥13m，高层与裙房间≥9m，裙房间≥6m）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 18. 下沉广场防火分隔宽度检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-018
+    name: 下沉广场防火分隔宽度检查
+    description: 检查下沉式广场等室外开敞空间的防火分隔宽度是否符合规范要求
+    discipline: fire
+    check_type: dimension_max
+    route: text
+    severity: C
+    priority: 50
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.4.13"
+    clause_text: "用于防火分隔的下沉式广场等室外开敞空间，其分隔部位的防火墙体总宽度之和不应大于相邻防火分区所需疏散宽度总和的30%，且不应大于10m"
+    target_object: ["下沉广场", "室外开敞空间", "防火分隔"]
+    target_property: "防火分隔宽度"
+    operator: "<="
+    limit_value: 10
+    unit: m
+    keywords: ["下沉广场", "防火分隔", "开敞空间", "分隔宽度"]
+    suggestion_template: "下沉广场防火分隔宽度超出规范限值，请按GB50016-2014 6.4.13条调整（≤相邻分区疏散宽度30%且≤10m）"
+    applicable_building_types: ["公共建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 19. 消防电梯设置要求检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-019
+    name: 消防电梯设置要求检查
+    description: 检查规定建筑是否按要求设置了消防电梯
+    discipline: fire
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 87
+    standard_code: GB50016-2014(2018)
+    standard_clause: "7.3.1"
+    clause_text: "下列建筑应设置消防电梯：一类高层公共建筑；建筑高度大于32m的二类高层公共建筑；建筑高度大于33m的住宅建筑；设置消防电梯的建筑的地下或半地下室应设置消防电梯"
+    target_object: ["消防电梯", "消防梯"]
+    target_property: "消防电梯设置"
+    keywords: ["消防电梯", "消防梯", "高层建筑"]
+    suggestion_template: "规定建筑未设置消防电梯，请按GB50016-2014 7.3.1条的要求增设消防电梯"
+    applicable_building_types: ["高层建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 20. 电气火灾监控系统设置检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: FIRE-020
+    name: 电气火灾监控系统设置检查
+    description: 检查规定场所是否按要求设置了电气火灾监控系统
+    discipline: fire
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 80
+    standard_code: GB50116-2013
+    standard_clause: "9.1.3"
+    clause_text: "下列场所应设置电气火灾监控系统：火灾危险大、电气线路敷设集中的场所；人员密集场所；重要的公共建筑；一类高层民用建筑中的消防负荷供电回路、非消防负荷总配电箱（柜）等处"
+    target_object: ["电气火灾监控系统", "漏电火灾报警", "电气火灾监控"]
+    target_property: "电气火灾监控系统设置"
+    keywords: ["电气火灾", "漏电火灾", "监控系统", "电气监控"]
+    suggestion_template: "规定场所未设置电气火灾监控系统，请按GB50116-2013 9.1.3条的要求在相应配电回路中增设"
+    applicable_building_types: ["全部"]

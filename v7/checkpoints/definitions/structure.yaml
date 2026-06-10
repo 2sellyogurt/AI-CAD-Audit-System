@@ -1,0 +1,586 @@
+discipline: structure
+description: 结构专业检查点 - 25个高频检查项
+
+checkpoints:
+  # ============================================================================
+  # STRUCT-001 ~ STRUCT-025: 结构专业25个高频检查项
+  # 引用标准: GB50010-2010(2015) 混凝土结构设计规范
+  #           GB50011-2010(2016) 建筑抗震设计规范
+  #           GB50007-2011      建筑地基基础设计规范
+  #           GB50017-2017      钢结构设计标准
+  # ============================================================================
+
+  # ---------------------------------------------------------------------------
+  # 1. 梁纵向受力钢筋最小配筋率检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-001
+    name: 梁纵向受力钢筋最小配筋率检查
+    description: 检查梁纵向受力钢筋配筋率是否≥0.2%和45ft/fy的较大值
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 100
+    standard_code: GB50010-2010(2015)
+    standard_clause: "11.3.6"
+    clause_text: "梁纵向受拉钢筋最小配筋百分率应符合本规范表8.5.1的规定"
+    target_object: ["梁", "框架梁", "KL"]
+    target_property: "配筋率"
+    operator: ">="
+    limit_value: 0.2
+    unit: "%"
+    keywords: ["配筋", "钢筋", "纵筋"]
+    suggestion_template: "增加梁纵向受力钢筋配筋率至≥0.2%"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 2. 框架梁端部箍筋加密区长度检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-002
+    name: 框架梁端部箍筋加密区长度检查
+    description: 检查框架梁端部箍筋加密区长度是否符合抗震等级要求（一级≥2h，二~四级≥1.5h）
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 98
+    standard_code: GB50011-2010(2016)
+    standard_clause: "6.3.3"
+    clause_text: "梁端箍筋加密区长度，一级抗震等级取2倍梁截面高度，二~四级抗震等级取1.5倍梁截面高度"
+    target_object: ["框架梁", "KL", "连梁"]
+    target_property: "箍筋加密区长度"
+    operator: ">="
+    limit_value: 0
+    unit: "mm"
+    keywords: ["箍筋", "加密区", "梁端"]
+    suggestion_template: "框架梁端部箍筋加密区长度不满足抗震等级要求，请按GB50011-2010 6.3.3条调整"
+    applicable_building_types: ["框架结构", "框架-剪力墙结构", "框架-核心筒结构"]
+
+  # ---------------------------------------------------------------------------
+  # 3. 框架柱最小截面尺寸检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-003
+    name: 框架柱最小截面尺寸检查
+    description: 检查框架柱截面最小尺寸是否符合抗震等级要求（四级≥300mm，一~三级≥400mm）
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 97
+    standard_code: GB50011-2010(2016)
+    standard_clause: "6.3.5"
+    clause_text: "框架柱截面边长，四级抗震等级不宜小于300mm，一~三级抗震等级不宜小于400mm"
+    target_object: ["框架柱", "KZ", "柱"]
+    target_property: "截面最小尺寸"
+    operator: ">="
+    limit_value: 400
+    unit: "mm"
+    keywords: ["柱截面", "截面尺寸", "柱宽"]
+    suggestion_template: "框架柱截面最小尺寸不满足抗震等级要求，请按GB50011-2010 6.3.5条调整"
+    applicable_building_types: ["框架结构", "框架-剪力墙结构", "框架-核心筒结构"]
+
+  # ---------------------------------------------------------------------------
+  # 4. 框架柱轴压比限值检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-004
+    name: 框架柱轴压比限值检查
+    description: 检查框架柱轴压比是否超过抗震等级对应的限值
+    discipline: structure
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 96
+    standard_code: GB50011-2010(2016)
+    standard_clause: "6.3.6"
+    clause_text: "柱轴压比不宜超过表6.3.6规定的限值，一级框架柱限值0.65，二级限值0.75，三级限值0.85"
+    target_object: ["框架柱", "KZ", "柱"]
+    target_property: "轴压比"
+    operator: "<="
+    limit_value: 0.85
+    unit: ""
+    keywords: ["轴压比", "轴压", "N"]
+    suggestion_template: "框架柱轴压比超出限值，请加大柱截面或提高混凝土强度等级"
+    applicable_building_types: ["框架结构", "框架-剪力墙结构", "框架-核心筒结构"]
+
+  # ---------------------------------------------------------------------------
+  # 5. 混凝土板最小厚度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-005
+    name: 混凝土板最小厚度检查
+    description: 检查混凝土板厚度是否符合最小厚度要求（单向板≥60mm，双向板≥80mm）
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 85
+    standard_code: GB50010-2010(2015)
+    standard_clause: "9.1.2"
+    clause_text: "现浇钢筋混凝土板最小厚度：单向板屋面板≥60mm，双向板≥80mm"
+    target_object: ["楼板", "板", "现浇板"]
+    target_property: "板厚"
+    operator: ">="
+    limit_value: 80
+    unit: "mm"
+    keywords: ["板厚", "楼板厚度", "板截面"]
+    suggestion_template: "混凝土板厚度不满足最小厚度要求，请按GB50010-2010 9.1.2条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 6. 剪力墙最小厚度检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-006
+    name: 剪力墙最小厚度检查
+    description: 检查剪力墙最小厚度是否符合抗震等级要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 95
+    standard_code: GB50011-2010(2016)
+    standard_clause: "6.4.1"
+    clause_text: "剪力墙最小厚度，一~二级抗震等级不宜小于160mm，三~四级不宜小于140mm"
+    target_object: ["剪力墙", "抗震墙", "Q"]
+    target_property: "墙厚"
+    operator: ">="
+    limit_value: 160
+    unit: "mm"
+    keywords: ["墙厚", "剪力墙厚度", "抗震墙"]
+    suggestion_template: "剪力墙厚度不满足抗震等级要求，请按GB50011-2010 6.4.1条调整"
+    applicable_building_types: ["剪力墙结构", "框架-剪力墙结构", "筒体结构"]
+
+  # ---------------------------------------------------------------------------
+  # 7. 柱纵筋最小配筋率检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-007
+    name: 柱纵筋最小配筋率检查
+    description: 检查柱纵向受力钢筋最小配筋率是否符合规范要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 94
+    standard_code: GB50010-2010(2015)
+    standard_clause: "8.5.1"
+    clause_text: "钢筋混凝土结构构件中纵向受力钢筋的最小配筋百分率应符合表8.5.1的规定"
+    target_object: ["柱", "框架柱", "KZ"]
+    target_property: "纵筋配筋率"
+    operator: ">="
+    limit_value: 0.55
+    unit: "%"
+    keywords: ["配筋率", "纵筋", "柱配筋"]
+    suggestion_template: "柱纵向受力钢筋配筋率不满足最小配筋率要求，请按GB50010-2010 8.5.1条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 8. 基础垫层厚度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-008
+    name: 基础垫层厚度检查
+    description: 检查基础垫层厚度是否符合规范要求（≥70mm）
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 80
+    standard_code: GB50007-2011
+    standard_clause: "8.2.9"
+    clause_text: "基础垫层厚度不宜小于70mm，垫层混凝土强度等级不宜低于C10"
+    target_object: ["基础", "垫层", "筏板基础"]
+    target_property: "垫层厚度"
+    operator: ">="
+    limit_value: 70
+    unit: "mm"
+    keywords: ["垫层", "垫层厚", "基础垫层"]
+    suggestion_template: "基础垫层厚度不满足规范要求，请按GB50007-2011 8.2.9条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 9. 地基承载力特征值检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-009
+    name: 地基承载力特征值检查
+    description: 检查地基承载力特征值是否满足基底压力要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 93
+    standard_code: GB50007-2011
+    standard_clause: "5.2.1"
+    clause_text: "基础底面的压力应符合：轴心荷载时pk≤fa；偏心荷载时pkmax≤1.2fa"
+    target_object: ["地基", "基础", "天然地基"]
+    target_property: "地基承载力特征值"
+    operator: ">="
+    limit_value: 100
+    unit: "kPa"
+    keywords: ["承载力", "地基承载力", "fa"]
+    suggestion_template: "地基承载力特征值不满足基底压力要求，请按GB50007-2011 5.2.1条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 10. 钢筋锚固长度检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-010
+    name: 钢筋锚固长度检查
+    description: 检查受拉钢筋基本锚固长度是否符合规范要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 92
+    standard_code: GB50010-2010(2015)
+    standard_clause: "8.3.1"
+    clause_text: "受拉钢筋的锚固长度应根据钢筋类别、混凝土强度等级确定，不应小于表8.3.1规定的数值"
+    target_object: ["梁", "柱", "板", "墙"]
+    target_property: "锚固长度"
+    operator: ">="
+    limit_value: 200
+    unit: "mm"
+    keywords: ["锚固", "锚固长度", "la", "laE"]
+    suggestion_template: "钢筋锚固长度不满足规范要求，请按GB50010-2010 8.3.1条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 11. 框架梁截面高跨比检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-011
+    name: 框架梁截面高跨比检查
+    description: 检查框架梁截面高度与跨度之比是否符合规范要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 82
+    standard_code: GB50010-2010(2015)
+    standard_clause: "11.3.5"
+    clause_text: "框架梁截面高度可取跨度的1/18~1/10"
+    target_object: ["框架梁", "KL", "梁"]
+    target_property: "高跨比"
+    operator: ">="
+    limit_value: 0.0556
+    unit: ""
+    keywords: ["高跨比", "梁高", "跨度"]
+    suggestion_template: "框架梁截面高跨比不满足规范要求，请按GB50010-2010 11.3.5条调整梁截面高度"
+    applicable_building_types: ["框架结构", "框架-剪力墙结构"]
+
+  # ---------------------------------------------------------------------------
+  # 12. 楼板配筋间距检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-012
+    name: 楼板配筋间距检查
+    description: 检查楼板受力钢筋间距是否超过最大间距限值
+    discipline: structure
+    check_type: dimension_max
+    route: text
+    severity: B
+    priority: 83
+    standard_code: GB50010-2010(2015)
+    standard_clause: "9.1.3"
+    clause_text: "板中受力钢筋的间距，当板厚≤150mm时不宜大于200mm，当板厚>150mm时不宜大于1.5h且不宜大于250mm"
+    target_object: ["楼板", "板", "现浇板"]
+    target_property: "钢筋间距"
+    operator: "<="
+    limit_value: 200
+    unit: "mm"
+    keywords: ["间距", "钢筋间距", "板筋"]
+    suggestion_template: "楼板受力钢筋间距超出规范限值，请按GB50010-2010 9.1.3条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 13. 框架柱箍筋体积配箍率检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-013
+    name: 框架柱箍筋体积配箍率检查
+    description: 检查框架柱箍筋体积配箍率是否符合抗震等级要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 91
+    standard_code: GB50011-2010(2016)
+    standard_clause: "6.3.9"
+    clause_text: "柱箍筋体积配箍率应按要求计算，一~四级抗震等级分别不应小于0.8%、0.6%、0.5%、0.4%"
+    target_object: ["框架柱", "KZ", "柱"]
+    target_property: "体积配箍率"
+    operator: ">="
+    limit_value: 0.5
+    unit: "%"
+    keywords: ["配箍率", "体积配箍率", "箍筋"]
+    suggestion_template: "框架柱箍筋体积配箍率不满足抗震等级要求，请按GB50011-2010 6.3.9条调整"
+    applicable_building_types: ["框架结构", "框架-剪力墙结构", "框架-核心筒结构"]
+
+  # ---------------------------------------------------------------------------
+  # 14. 悬挑梁根部截面高度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-014
+    name: 悬挑梁根部截面高度检查
+    description: 检查悬挑梁根部截面高度是否满足规范最小要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 81
+    standard_code: GB50010-2010(2015)
+    standard_clause: "9.2.10"
+    clause_text: "悬挑梁的截面高度应取其跨度的1/6~1/5"
+    target_object: ["悬挑梁", "挑梁", "XL"]
+    target_property: "根部截面高度"
+    operator: ">="
+    limit_value: 0
+    unit: "mm"
+    keywords: ["悬挑梁", "挑梁", "XL"]
+    suggestion_template: "悬挑梁根部截面高度不满足规范要求，请按GB50010-2010 9.2.10条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 15. 抗震缝最小宽度检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-015
+    name: 抗震缝最小宽度检查
+    description: 检查抗震缝宽度是否符合抗震设防要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 90
+    standard_code: GB50011-2010(2016)
+    standard_clause: "6.1.4"
+    clause_text: "防震缝宽度应分别按不同结构类型确定，框架结构建筑高度≤15m时缝宽≥100mm"
+    target_object: ["抗震缝", "防震缝", "缝"]
+    target_property: "缝宽"
+    operator: ">="
+    limit_value: 100
+    unit: "mm"
+    keywords: ["抗震缝", "防震缝", "缝宽"]
+    suggestion_template: "抗震缝宽度不满足规范要求，请按GB50011-2010 6.1.4条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 16. 桩基最小中心距检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-016
+    name: 桩基最小中心距检查
+    description: 检查桩基最小中心距是否符合规范要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 78
+    standard_code: GB50007-2011
+    standard_clause: "8.5.3"
+    clause_text: "桩的最小中心距应符合：摩擦型桩排数不少于3排时不宜小于3d，端承型桩不宜小于3d"
+    target_object: ["桩基", "桩", "灌注桩"]
+    target_property: "桩中心距"
+    operator: ">="
+    limit_value: 0
+    unit: "mm"
+    keywords: ["桩距", "中心距", "桩间距"]
+    suggestion_template: "桩基最小中心距不满足规范要求，请按GB50007-2011 8.5.3条调整"
+    applicable_building_types: ["桩基础"]
+
+  # ---------------------------------------------------------------------------
+  # 17. 混凝土保护层最小厚度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-017
+    name: 混凝土保护层最小厚度检查
+    description: 检查混凝土保护层最小厚度是否符合环境类别要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 84
+    standard_code: GB50010-2010(2015)
+    standard_clause: "8.2.1"
+    clause_text: "构件中普通钢筋及预应力筋的混凝土保护层厚度应满足表8.2.1的规定"
+    target_object: ["梁", "柱", "板", "墙", "基础"]
+    target_property: "保护层厚度"
+    operator: ">="
+    limit_value: 15
+    unit: "mm"
+    keywords: ["保护层", "保护层厚", "混凝土保护层"]
+    suggestion_template: "混凝土保护层厚度不满足环境类别要求，请按GB50010-2010 8.2.1条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 18. 梁侧面构造钢筋配置检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-018
+    name: 梁侧面构造钢筋配置检查
+    description: 检查梁腹板高度≥450mm时是否配置了侧面构造钢筋
+    discipline: structure
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 79
+    standard_code: GB50010-2010(2015)
+    standard_clause: "9.2.15"
+    clause_text: "梁的腹板高度hw≥450mm时，在梁的两个侧面应沿高度配置纵向构造钢筋，每侧配筋率不应小于0.1%"
+    target_object: ["梁", "框架梁", "KL"]
+    target_property: "侧面构造钢筋"
+    operator: ">="
+    limit_value: 0.1
+    unit: "%"
+    keywords: ["腰筋", "构造钢筋", "侧面钢筋"]
+    suggestion_template: "梁腹板高度≥450mm时需配置侧面构造钢筋，每侧配筋率≥0.1%，请按GB50010-2010 9.2.15条执行"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 19. 框架柱全截面配筋率最大限值检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-019
+    name: 框架柱全截面配筋率最大限值检查
+    description: 检查框架柱全部纵向受力钢筋配筋率是否超过最大限值
+    discipline: structure
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 89
+    standard_code: GB50011-2010(2016)
+    standard_clause: "6.3.8"
+    clause_text: "柱纵向钢筋总配筋率不应大于5%，抗震设计时不应大于5%"
+    target_object: ["框架柱", "KZ", "柱"]
+    target_property: "全截面配筋率"
+    operator: "<="
+    limit_value: 5.0
+    unit: "%"
+    keywords: ["配筋率", "总配筋率", "柱配筋"]
+    suggestion_template: "框架柱全截面配筋率超出5%最大限值，请按GB50011-2010 6.3.8条调整截面尺寸或钢筋配置"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 20. 楼板开洞加强措施检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-020
+    name: 楼板开洞加强措施检查
+    description: 检查楼板开洞尺寸超过限值时是否采取了补强措施
+    discipline: structure
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 77
+    standard_code: GB50010-2010(2015)
+    standard_clause: "9.2.14"
+    clause_text: "板开洞尺寸大于等于300mm时，应在洞口周围配置补强钢筋"
+    target_object: ["楼板", "板", "开洞板"]
+    target_property: "洞口补强措施"
+    operator: ">="
+    limit_value: 0
+    unit: ""
+    keywords: ["开洞", "洞口", "补强"]
+    suggestion_template: "楼板开洞尺寸≥300mm时需在洞口周边配置补强钢筋，请按GB50010-2010 9.2.14条执行"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 21. 预应力筋张拉控制应力检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-021
+    name: 预应力筋张拉控制应力检查
+    description: 检查预应力筋张拉控制应力σcon是否在规定范围内
+    discipline: structure
+    check_type: dimension_max
+    route: text
+    severity: C
+    priority: 60
+    standard_code: GB50010-2010(2015)
+    standard_clause: "10.1.3"
+    clause_text: "预应力筋张拉控制应力σcon不宜超过0.75fptk"
+    target_object: ["预应力筋", "预应力构件", "预应力梁"]
+    target_property: "张拉控制应力"
+    operator: "<="
+    limit_value: 0.75
+    unit: "fptk"
+    keywords: ["预应力", "张拉", "控制应力"]
+    suggestion_template: "预应力筋张拉控制应力σcon超出限值，请按GB50010-2010 10.1.3条调整"
+    applicable_building_types: ["预应力结构"]
+
+  # ---------------------------------------------------------------------------
+  # 22. 砌体结构圈梁设置检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-022
+    name: 砌体结构圈梁设置检查
+    description: 检查砌体结构房屋圈梁设置是否符合抗震设计要求
+    discipline: structure
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 76
+    standard_code: GB50011-2010(2016)
+    standard_clause: "7.3.3"
+    clause_text: "多层砌体房屋应按表7.3.3的要求设置现浇钢筋混凝土圈梁"
+    target_object: ["砌体墙", "砌体结构", "墙体"]
+    target_property: "圈梁设置"
+    operator: ">="
+    limit_value: 0
+    unit: ""
+    keywords: ["圈梁", "砌体", "构造措施"]
+    suggestion_template: "砌体结构房屋圈梁设置不满足抗震要求，请按GB50011-2010 7.3.3条增设圈梁"
+    applicable_building_types: ["砌体结构"]
+
+  # ---------------------------------------------------------------------------
+  # 23. 钢结构焊缝等级标注检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-023
+    name: 钢结构焊缝等级标注检查
+    description: 检查钢结构施工图中焊缝等级是否按要求正确标注
+    discipline: structure
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 55
+    standard_code: GB50017-2017
+    standard_clause: "11.2.2"
+    clause_text: "焊缝应根据结构的重要性、荷载特性、工作环境等因素分级，并应在施工图中注明焊缝质量等级"
+    target_object: ["钢结构", "钢梁", "钢柱", "节点"]
+    target_property: "焊缝等级标注"
+    operator: ">="
+    limit_value: 0
+    unit: ""
+    keywords: ["焊缝", "焊接", "焊缝等级"]
+    suggestion_template: "钢结构焊缝等级未正确标注，请按GB50017-2017 11.2.2条在施工图中完整标注"
+    applicable_building_types: ["钢结构"]
+
+  # ---------------------------------------------------------------------------
+  # 24. 转换梁截面高度检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-024
+    name: 转换梁截面高度检查
+    description: 检查转换梁截面高度是否满足托墙转换的最小高度要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 88
+    standard_code: GB50010-2010(2015)
+    standard_clause: "9.2.8"
+    clause_text: "转换梁截面高度不宜小于计算跨度的1/6"
+    target_object: ["转换梁", "托梁", "转换层梁"]
+    target_property: "截面高度"
+    operator: ">="
+    limit_value: 0
+    unit: "mm"
+    keywords: ["转换梁", "托梁", "转换层"]
+    suggestion_template: "转换梁截面高度不满足规范要求，请按GB50010-2010 9.2.8条调整"
+    applicable_building_types: ["框支结构", "转换层结构"]
+
+  # ---------------------------------------------------------------------------
+  # 25. 预埋件锚筋最小直径检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: STRUCT-025
+    name: 预埋件锚筋最小直径检查
+    description: 检查预埋件锚筋直径是否满足规范最小直径要求
+    discipline: structure
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 75
+    standard_code: GB50010-2010(2015)
+    standard_clause: "9.7.2"
+    clause_text: "预埋件的锚筋直径不宜小于8mm，且不宜大于25mm"
+    target_object: ["预埋件", "埋件", "锚筋"]
+    target_property: "锚筋直径"
+    operator: ">="
+    limit_value: 8
+    unit: "mm"
+    keywords: ["预埋件", "锚筋", "埋件"]
+    suggestion_template: "预埋件锚筋直径不满足最小直径要求（≥8mm），请按GB50010-2010 9.7.2条调整"
+    applicable_building_types: ["全部"]

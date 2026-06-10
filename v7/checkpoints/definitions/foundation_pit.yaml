@@ -1,0 +1,92 @@
+discipline: foundation_pit
+description: 基坑/基础专业检查点 - 5个高频检查项
+
+checkpoints:
+
+  - id: FP-001
+    name: 基坑支护形式标注检查
+    description: 检查基坑支护方案及支护形式是否在设计图中明确标注
+    discipline: foundation_pit
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 95
+    standard_code: GB50086-2015
+    standard_clause: "4.1.1"
+    clause_text: "基坑支护应根据场地条件、基坑深度、周边环境等因素选择合理的支护形式，并在设计文件中明确"
+    target_object: ["基坑支护", "基坑"]
+    target_property: "应标注基坑支护形式"
+    keywords: ["基坑", "支护", "基坑支护", "支护形式", "排桩", "地下连续墙"]
+    suggestion_template: "补充标注基坑支护形式及具体构造要求，明确支护结构类型"
+    applicable_building_types: ["全部"]
+
+  - id: FP-002
+    name: 降水井间距检查
+    description: 检查基坑降水井的布置间距是否满足规范要求
+    discipline: foundation_pit
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 78
+    standard_code: JGJ120-2012
+    standard_clause: "7.3.5"
+    clause_text: "降水井的间距应根据降水深度、含水层渗透性等因素综合确定，井间距不宜大于10.0m"
+    target_object: ["降水井", "降水"]
+    target_property: "降水井间距"
+    operator: ">="
+    limit_value: 10000
+    unit: mm
+    keywords: ["降水井", "降水", "井点", "间距"]
+    suggestion_template: "降水井间距不应大于10000mm，请根据水文地质条件合理布置降水井间距"
+    applicable_building_types: ["全部"]
+
+  - id: FP-003
+    name: 锚杆长度标注检查
+    description: 检查基坑锚杆的长度及锚固段长度是否标注完整
+    discipline: foundation_pit
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 76
+    standard_code: GB50086-2015
+    standard_clause: "4.3.1"
+    clause_text: "锚杆的设计长度应根据地层条件和锚固力要求确定，设计图中应标注锚杆长度、倾角和间距"
+    target_object: ["锚杆", "土钉"]
+    target_property: "应标注锚杆长度"
+    keywords: ["锚杆", "土钉", "锚固", "长度", "倾角"]
+    suggestion_template: "补充标注锚杆的总长度、锚固段长度、倾角及间距参数"
+    applicable_building_types: ["全部"]
+
+  - id: FP-004
+    name: 基坑监测点布置标注检查
+    description: 检查基坑监测点的布置位置是否在设计图中标注
+    discipline: foundation_pit
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 74
+    standard_code: GB50497-2009
+    standard_clause: "5.1.3"
+    clause_text: "基坑工程监测点的布置应能反映基坑及周边环境的变形特征，并在监测方案中标明具体位置"
+    target_object: ["监测点", "基坑监测"]
+    target_property: "应标注监测点布置"
+    keywords: ["监测", "监测点", "变形监测", "沉降", "位移"]
+    suggestion_template: "补充标注基坑监测点布置位置及监测项目（水平位移、沉降、地下水位等）"
+    applicable_building_types: ["全部"]
+
+  - id: FP-005
+    name: 排水沟截面尺寸标注检查
+    description: 检查基坑排水沟的截面尺寸是否在设计图中标注完整
+    discipline: foundation_pit
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 62
+    standard_code: JGJ120-2012
+    standard_clause: "7.4.2"
+    clause_text: "基坑内应设置排水沟和集水坑，排水沟的截面尺寸应根据排水量确定"
+    target_object: ["排水沟", "基坑排水"]
+    target_property: "应标注排水沟截面尺寸"
+    keywords: ["排水沟", "集水坑", "排水", "截面", "基坑"]
+    suggestion_template: "补充标注基坑排水沟的截面尺寸（宽度×深度）及排水坡度"
+    applicable_building_types: ["全部"]

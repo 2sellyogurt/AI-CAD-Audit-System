@@ -1,0 +1,453 @@
+discipline: electrical
+description: 电气专业检查点 - 20个高频检查项
+
+checkpoints:
+
+  # ============================================================================
+  # ELEC-001 ~ ELEC-020: 电气专业20个高频检查项
+  # 引用标准: GB50054-2011      低压配电设计规范
+  #           GB50016-2014(2018) 建筑设计防火规范
+  #           GB50057-2010      建筑物防雷设计规范
+  #           GB50053-2013      20kV及以下变电所设计规范
+  #           GB50034-2013      建筑照明设计标准
+  #           GB50116-2013      火灾自动报警系统设计规范
+  # ============================================================================
+
+  # ---------------------------------------------------------------------------
+  # 1. 配电箱安装高度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-001
+    name: 配电箱安装高度检查
+    description: 检查配电箱安装高度是否符合规范要求（照明箱底边距地面≥1.5m，动力箱底边距地面≥1.2m）
+    discipline: electrical
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 85
+    standard_code: GB50054-2011
+    standard_clause: "6.2.1"
+    clause_text: "配电箱的安装高度应符合设计要求，照明配电箱底边距地面不宜小于1.5m，动力配电箱底边距地面不宜小于1.2m"
+    target_object: ["配电箱", "照明配电箱", "动力配电箱"]
+    target_property: "安装高度"
+    operator: ">="
+    limit_value: 1.5
+    unit: m
+    keywords: ["配电箱", "安装高度", "照明箱", "动力箱"]
+    suggestion_template: "配电箱安装高度不满足规范要求，请按GB50054-2011 6.2.1条调整安装高度（照明箱≥1.5m，动力箱≥1.2m）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 2. 电缆桥架填充率检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-002
+    name: 电缆桥架填充率检查
+    description: 检查电缆桥架内电缆填充率是否超过规范限值
+    discipline: electrical
+    check_type: dimension_max
+    route: text
+    severity: B
+    priority: 83
+    standard_code: GB50054-2011
+    standard_clause: "6.1.3"
+    clause_text: "电缆桥架内电缆的总截面积（包括外护层）不应超过桥架横截面积的40%，控制电缆不应超过50%"
+    target_object: ["电缆桥架", "电缆梯架", "电缆托盘"]
+    target_property: "电缆填充率"
+    operator: "<="
+    limit_value: 40
+    unit: "%"
+    keywords: ["桥架", "填充率", "电缆桥架", "截面积"]
+    suggestion_template: "电缆桥架内电缆填充率超过40%（控制电缆超过50%），请按GB50054-2011 6.1.3条调整电缆布置或增大桥架规格"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 3. 应急照明连续供电时间检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-003
+    name: 应急照明连续供电时间检查
+    description: 检查应急照明连续供电时间是否满足疏散要求
+    discipline: electrical
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 100
+    standard_code: GB50016-2014(2018)
+    standard_clause: "10.1.5"
+    clause_text: "应急照明和疏散指示标志的备用电源连续供电时间：建筑高度≥100m的民用建筑不应少于1.5h，医疗建筑、老年人照料设施、总建筑面积≥100000㎡的公共建筑不应少于1.0h，其他建筑不应少于0.5h"
+    target_object: ["应急照明", "疏散照明", "备用电源"]
+    target_property: "连续供电时间"
+    operator: ">="
+    limit_value: 0.5
+    unit: h
+    keywords: ["应急照明", "供电时间", "备用电源", "疏散照明"]
+    suggestion_template: "应急照明连续供电时间不满足规范要求，请按GB50016-2014 10.1.5条根据建筑类型调整（≥0.5h/1.0h/1.5h）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 4. 疏散照明地面最低照度检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-004
+    name: 疏散照明地面最低照度检查
+    description: 检查疏散照明地面最低照度是否满足规范要求
+    discipline: electrical
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 99
+    standard_code: GB50016-2014(2018)
+    standard_clause: "10.3.2"
+    clause_text: "疏散照明的地面最低水平照度：疏散走道不应低于1.0lx，人员密集场所不应低于3.0lx，楼梯间、前室或合用前室不应低于5.0lx"
+    target_object: ["疏散照明", "疏散走道", "楼梯间", "前室"]
+    target_property: "地面最低照度"
+    operator: ">="
+    limit_value: 1.0
+    unit: lx
+    keywords: ["疏散照明", "照度", "地面照度", "疏散走道"]
+    suggestion_template: "疏散照明地面最低照度不满足GB50016-2014 10.3.2条要求，请根据场所类型调整灯具布置（走道≥1.0lx，楼梯间≥5.0lx）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 5. 防雷接地电阻值检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-005
+    name: 防雷接地电阻值检查
+    description: 检查防雷接地电阻值是否满足规范限值要求
+    discipline: electrical
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 98
+    standard_code: GB50057-2010
+    standard_clause: "4.2.1"
+    clause_text: "每栋建筑物应装设防雷装置，防雷接地装置的冲击接地电阻值不应大于10Ω；当与电气系统共用接地装置时不应大于1Ω"
+    target_object: ["防雷装置", "接地装置", "接闪器"]
+    target_property: "接地电阻值"
+    operator: "<="
+    limit_value: 10
+    unit: "Ω"
+    keywords: ["接地电阻", "防雷接地", "冲击接地电阻"]
+    suggestion_template: "防雷接地电阻值超过规范限值（≤10Ω），请按GB50057-2010 4.2.1条调整接地装置或增设接地极"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 6. 插座回路漏电保护检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-006
+    name: 插座回路漏电保护检查
+    description: 检查插座回路是否设置了漏电电流动作保护器
+    discipline: electrical
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 97
+    standard_code: GB50054-2011
+    standard_clause: "5.1.8"
+    clause_text: "住宅、旅馆、幼儿园、医院等场所的插座回路应设置额定动作电流不大于30mA的漏电电流动作保护器"
+    target_object: ["插座回路", "漏电保护器", "RCD"]
+    target_property: "漏电保护设置"
+    keywords: ["漏电保护", "RCD", "漏电保护器", "30mA"]
+    suggestion_template: "插座回路未设置漏电电流动作保护器（RCD），请按GB50054-2011 5.1.8条补设额定动作电流≤30mA的漏电保护器"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 7. 电缆与热力管间距检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-007
+    name: 电缆与热力管间距检查
+    description: 检查电缆敷设时与热力管道的净距是否满足规范要求
+    discipline: electrical
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 80
+    standard_code: GB50054-2011
+    standard_clause: "6.2.3"
+    clause_text: "电缆与热力管道（沟）的净距：电缆与热力管道平行敷设时不应小于1m，交叉敷设时不应小于0.5m；采取隔热措施时可适当减小"
+    target_object: ["电缆", "电缆敷设", "电缆管线"]
+    target_property: "与热力管净距"
+    operator: ">="
+    limit_value: 1000
+    unit: mm
+    keywords: ["热力管", "电缆间距", "净距", "敷设"]
+    suggestion_template: "电缆与热力管道净距不满足规范要求，请按GB50054-2011 6.2.3条调整敷设位置（平行≥1m，交叉≥0.5m）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 8. 变配电室净高检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-008
+    name: 变配电室净高检查
+    description: 检查变配电室的净高是否满足设备安装和运维要求
+    discipline: electrical
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 82
+    standard_code: GB50053-2013
+    standard_clause: "4.3.1"
+    clause_text: "变配电室的净高不应低于3.0m；当采用气体绝缘开关柜时，净高不应低于2.5m"
+    target_object: ["变配电室", "配电室", "变电所"]
+    target_property: "净高"
+    operator: ">="
+    limit_value: 3.0
+    unit: m
+    keywords: ["变配电室", "净高", "配电室高度"]
+    suggestion_template: "变配电室净高不满足规范要求（≥3.0m），请按GB50053-2013 4.3.1条调整层高或选用气体绝缘开关柜（≥2.5m）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 9. 变压器容量标注检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-009
+    name: 变压器容量标注检查
+    description: 检查变压器容量是否在设计图中正确标注
+    discipline: electrical
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 55
+    standard_code: GB50053-2013
+    standard_clause: "3.1.2"
+    clause_text: "变压器的容量应根据负荷计算确定，并应在设计图中标注变压器额定容量、电压等级和联结组别"
+    target_object: ["变压器", "干式变压器", "油浸变压器"]
+    target_property: "容量标注"
+    keywords: ["变压器", "容量", "额定容量", "标注"]
+    suggestion_template: "变压器容量等参数未在设计图中完整标注，请按GB50053-2013 3.1.2条补标额定容量、电压等级和联结组别"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 10. 发电机储油量检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-010
+    name: 发电机储油量检查
+    description: 检查柴油发电机储油量是否满足规范要求
+    discipline: electrical
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 78
+    standard_code: GB50016-2014(2018)
+    standard_clause: "5.4.14"
+    clause_text: "柴油发电机房内设置储油间时，其总储油量不应大于1m³，且储油间应采用防火墙与发电机间隔开"
+    target_object: ["柴油发电机", "储油间", "发电机房"]
+    target_property: "储油量"
+    operator: "<="
+    limit_value: 1.0
+    unit: "m³"
+    keywords: ["发电机", "储油间", "储油量", "柴油"]
+    suggestion_template: "柴油发电机储油间总储油量超过1m³限值，请按GB50016-2014 5.4.14条减少储量或增大储油间防火分隔"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 11. 灯具距地面最小高度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-011
+    name: 灯具距地面最小高度检查
+    description: 检查可触及的灯具距地面最小高度是否满足防触电安全要求
+    discipline: electrical
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 75
+    standard_code: GB50034-2013
+    standard_clause: "4.2.1"
+    clause_text: "灯具距地面的最低悬挂高度：室内一般场所不宜低于2.2m，当低于2.2m时应采用安全电压或采取其他防触电措施"
+    target_object: ["灯具", "照明灯具", "吊灯"]
+    target_property: "距地面高度"
+    operator: ">="
+    limit_value: 2.2
+    unit: m
+    keywords: ["灯具高度", "安装高度", "悬挂高度"]
+    suggestion_template: "灯具距地面高度低于2.2m，请按GB50034-2013 4.2.1条调整安装高度或采取安全电压等防触电措施"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 12. 电缆井最小截面检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-012
+    name: 电缆井最小截面检查
+    description: 检查电缆井（电气竖井）最小截面是否满足电缆敷设和运维要求
+    discipline: electrical
+    check_type: dimension_min
+    route: text
+    severity: C
+    priority: 50
+    standard_code: GB50054-2011
+    standard_clause: "6.1.5"
+    clause_text: "电缆井（电气竖井）的截面尺寸应满足电缆敷设和检修空间的要求，其最小净深度不宜小于0.6m，净宽度不宜小于0.8m"
+    target_object: ["电缆井", "电气竖井", "电缆竖井"]
+    target_property: "最小截面"
+    operator: ">="
+    limit_value: 600
+    unit: mm
+    keywords: ["电缆井", "竖井", "电气竖井", "电缆敷设"]
+    suggestion_template: "电缆井截面尺寸不满足最小要求，请按GB50054-2011 6.1.5条调整（净深度≥0.6m，净宽度≥0.8m）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 13. 消防配电线路敷设要求检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-013
+    name: 消防配电线路敷设要求检查
+    description: 检查消防配电线路的敷设方式和防火保护措施是否符合规范要求
+    discipline: electrical
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 96
+    standard_code: GB50016-2014(2018)
+    standard_clause: "10.1.10"
+    clause_text: "消防配电线路应满足火灾时连续供电的需要，明敷时（包括敷设在吊顶内）应穿金属导管或采用封闭式金属槽盒保护；暗敷时应穿管并敷设在不燃性结构内且保护层厚度不应小于30mm"
+    target_object: ["消防配电线路", "消防供电", "消防电缆"]
+    target_property: "敷设防火保护"
+    keywords: ["消防配电", "防火保护", "金属导管", "封闭式金属槽盒"]
+    suggestion_template: "消防配电线路敷设防火保护措施不满足规范要求，请按GB50016-2014 10.1.10条采取金属导管保护或暗敷（保护层≥30mm）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 14. 应急疏散指示标志间距检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-014
+    name: 应急疏散指示标志间距检查
+    description: 检查应急疏散指示标志的设置间距是否符合规范要求
+    discipline: electrical
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 95
+    standard_code: GB50016-2014(2018)
+    standard_clause: "10.3.5"
+    clause_text: "疏散指示标志的间距不应大于20m；袋形走道不应大于10m；在走道转角区不应大于1.0m"
+    target_object: ["疏散指示标志", "安全出口标志", "疏散引导标志"]
+    target_property: "设置间距"
+    operator: "<="
+    limit_value: 20
+    unit: m
+    keywords: ["疏散指示", "标志间距", "疏散标志", "安全出口"]
+    suggestion_template: "应急疏散指示标志间距超过规范限值，请按GB50016-2014 10.3.5条调整（直线段≤20m，袋形走道≤10m，转角≤1.0m）"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 15. 强弱电间距检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-015
+    name: 强弱电间距检查
+    description: 检查强电与弱电线缆之间的最小净距是否满足防电磁干扰要求
+    discipline: electrical
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 79
+    standard_code: GB50054-2011
+    standard_clause: "6.2.4"
+    clause_text: "强弱电线路平行敷设时，其最小净距不宜小于300mm；当不能满足时，应采取金属导管屏蔽等防干扰措施"
+    target_object: ["强电线缆", "弱电线缆", "电缆敷设"]
+    target_property: "强弱电间距"
+    operator: ">="
+    limit_value: 300
+    unit: mm
+    keywords: ["强弱电", "间距", "防干扰", "电磁干扰"]
+    suggestion_template: "强弱电线缆间距不满足规范要求（≥300mm），请按GB50054-2011 6.2.4条调整间距或采取金属导管屏蔽措施"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 16. 母线槽穿越防火分区防火封堵检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-016
+    name: 母线槽穿越防火分区防火封堵检查
+    description: 检查母线槽穿越防火分区、防火墙时是否采取了防火封堵措施
+    discipline: electrical
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 94
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.2.6"
+    clause_text: "母线槽、电缆桥架等穿越防火分区、防火墙、防火隔墙时，其穿越处的缝隙应采用防火封堵材料封堵严密"
+    target_object: ["母线槽", "封闭母线", "防火封堵"]
+    target_property: "防火封堵设置"
+    keywords: ["防火封堵", "母线槽", "防火分区", "封堵材料"]
+    suggestion_template: "母线槽穿越防火分区/防火墙处未设置防火封堵，请按GB50016-2014 6.2.6条采用防火封堵材料封堵严密"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 17. 照度计算值标注检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-017
+    name: 照度计算值标注检查
+    description: 检查照明设计图中照度计算值是否在设计图中正确标注
+    discipline: electrical
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 45
+    standard_code: GB50034-2013
+    standard_clause: "4.1.1"
+    clause_text: "照明设计应进行照度计算，设计图中应标注各房间或场所的设计照度值和功率密度值"
+    target_object: ["照明设计", "照度计算", "照明平面图"]
+    target_property: "照度计算值标注"
+    keywords: ["照度", "照度计算", "功率密度", "照明设计"]
+    suggestion_template: "照明设计图中照度计算值未完整标注，请按GB50034-2013 4.1.1条补标设计照度值和功率密度值"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 18. 电气管线穿墙套管检查 (D级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-018
+    name: 电气管线穿墙套管检查
+    description: 检查电气管线穿越墙体、楼板时是否设置了保护套管
+    discipline: electrical
+    check_type: text_presence
+    route: text
+    severity: D
+    priority: 30
+    standard_code: GB50054-2011
+    standard_clause: "6.1.7"
+    clause_text: "电气管线穿过墙体、楼板的孔洞应设置保护套管，套管两端伸出墙面的长度不宜小于10mm，且套管与管线的缝隙应采用防火封堵材料封堵"
+    target_object: ["电气管线", "穿墙套管", "电缆保护管"]
+    target_property: "穿墙套管设置"
+    keywords: ["穿墙套管", "保护管", "穿线管", "封堵"]
+    suggestion_template: "电气管线穿越墙体/楼板处未设置保护套管，请按GB50054-2011 6.1.7条补设套管并封堵缝隙"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 19. 防雷等电位连接要求检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-019
+    name: 防雷等电位连接要求检查
+    description: 检查建筑物防雷等电位连接措施是否符合规范要求
+    discipline: electrical
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 81
+    standard_code: GB50057-2010
+    standard_clause: "4.3.3"
+    clause_text: "建筑物应做等电位连接，进出建筑物的金属管道、金属桥架、电缆金属外皮等应与防雷接地装置做等电位连接"
+    target_object: ["等电位连接", "总等电位箱", "防雷接地"]
+    target_property: "等电位连接设置"
+    keywords: ["等电位", "等电位连接", "接地", "防雷"]
+    suggestion_template: "建筑物防雷等电位连接措施不完善，请按GB50057-2010 4.3.3条对所有进出建筑物的金属管道做等电位连接"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 20. 火灾自动报警系统探测器间距检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: ELEC-020
+    name: 火灾自动报警系统探测器间距检查
+    description: 检查火灾自动报警系统感烟/感温探测器的最大安装间距是否符合规范要求
+    discipline: electrical
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 93
+    standard_code: GB50116-2013
+    standard_clause: "6.2.2"
+    clause_text: "感烟探测器的安装间距不应大于12m，感温探测器的安装间距不应大于8m；探测器至墙边距离不应小于0.5m"
+    target_object: ["火灾探测器", "感烟探测器", "感温探测器"]
+    target_property: "探测器安装间距"
+    operator: "<="
+    limit_value: 12
+    unit: m
+    keywords: ["火灾探测器", "安装间距", "感烟", "感温"]
+    suggestion_template: "火灾探测器安装间距超出规范限值，请按GB50116-2013 6.2.2条调整（感烟≤12m，感温≤8m，距墙≥0.5m）"
+    applicable_building_types: ["全部"]

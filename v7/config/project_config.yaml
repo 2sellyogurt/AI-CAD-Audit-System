@@ -1,0 +1,111 @@
+project:
+  id: PROJ-20260529-001
+  name: AI智能审图系统 v7.0
+  version: 7.0.0
+  description: 混合架构多角色Agent集群审图系统
+
+paths:
+  root: ./v7.0
+  checkpoints: ./v7.0/checkpoints/definitions
+  agents_prompts: ./v7.0/agents/prompts
+  output: ./output_v7.0
+  temp: ./temp_v7.0
+  cad_host_dir: ./input
+
+llm:
+  api_timeout_seconds: 120
+  api_max_retries: 2
+  retry_delay_seconds: [2, 5]
+  global_max_concurrent: 10
+  per_agent_max_concurrent: 5
+  rate_limit_pause_seconds: 60
+  failover_enabled: true
+
+  providers:
+    zhipu:
+      base_url: https://open.bigmodel.cn/api/paas/v4
+      text_model: glm-4.5-air
+      vision_model: glm-4.6v-flash
+      api_key_env: ZHIPU_API_KEY
+      text_api_key_env: ZHIPU_TEXT_KEY
+      vision_api_key_env: ZHIPU_VISION_KEY
+
+    deepseek:
+      base_url: https://api.deepseek.com/v1
+      text_model: deepseek-chat
+      vision_model: deepseek-chat
+      api_key_env: DEEPSEEK_API_KEY
+
+    openai:
+      base_url: https://api.openai.com/v1
+      text_model: gpt-4o-mini
+      vision_model: gpt-4o
+      api_key_env: OPENAI_API_KEY
+
+    doubao:
+      base_url: https://ark.cn-beijing.volces.com/api/v3
+      text_model: doubao-seed-2-250715
+      vision_model: doubao-seed-vision-2-250715
+      api_key_env: DOUBAO_API_KEY
+
+    ollama:
+      base_url: http://localhost:11434/v1
+      text_model: qwen2.5:7b
+      vision_model: qwen2.5-vl:7b
+      api_key_env: ""
+
+  routing:
+    default_text_provider: doubao
+    default_vision_provider: doubao
+    complex_vision_provider: doubao
+    local_provider: ollama
+    fallback_chain: [doubao, zhipu, deepseek, openai]
+
+  deployment:
+    mode: hybrid
+    modes:
+      local_only:
+        text_provider: ollama
+        vision_provider: ollama
+        requires_network: false
+        accuracy_penalty: 0.15
+      hybrid:
+        text_provider: doubao
+        vision_provider: doubao
+        local_fallback: ollama
+        requires_network: true
+      cloud_only:
+        text_provider: doubao
+        vision_provider: doubao
+        requires_network: true
+
+review:
+  dual_path:
+    severity_a: mandatory
+    severity_b: mandatory
+    severity_c: sample_10_percent
+    severity_d: optional
+  false_negative_audit:
+    sample_rate: 0.10
+    audit_frequency_days: 30
+    auto_retrigger_threshold: 0.001
+  checkpoint_engine:
+    max_checkpoints_per_agent: 50
+    text_route_default: true
+    visual_route_fallback: true
+
+cad:
+  supported_versions:
+    - AutoCAD 2018+
+    - 中望CAD 2023+
+    - 浩辰CAD 2022+
+  print_dpi: 300
+  print_format: A3
+  print_color_mode: monochrome
+  classification_rules:
+    building: ["建施", "建筑", "总图", "平面", "立面", "节点", "门窗", "幕墙", "装饰"]
+    structure: ["结施", "结构", "基础", "配筋", "桩基"]
+    hvac: ["暖施", "暖通", "空调", "通风", "供暖", "防排烟"]
+    plumbing: ["水施", "给排水", "给水", "排水", "消火栓", "喷淋"]
+    electrical: ["电施", "电气", "配电", "照明", "防雷", "弱电"]
+    fire: ["消施", "消防", "防火", "报警", "灭火"]

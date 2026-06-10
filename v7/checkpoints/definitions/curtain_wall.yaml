@@ -1,0 +1,92 @@
+discipline: curtain_wall
+description: 幕墙专业检查点 - 5个高频检查项
+
+checkpoints:
+
+  - id: CW-001
+    name: 幕墙立柱与主体结构连接节点标注检查
+    description: 检查图纸中幕墙立柱与主体结构的连接节点是否标注完整
+    discipline: curtain_wall
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 95
+    standard_code: GB/T21086-2007
+    standard_clause: "5.2.1"
+    clause_text: "幕墙立柱应与主体结构可靠连接，连接节点应明确标注连接方式及构造要求"
+    target_object: ["幕墙立柱", "幕墙骨架"]
+    target_property: "应标注连接节点大样"
+    keywords: ["幕墙", "立柱", "连接节点", "预埋件", "锚固"]
+    suggestion_template: "补充标注幕墙立柱与主体结构的连接节点大样，明确连接方式和锚固要求"
+    applicable_building_types: ["全部"]
+
+  - id: CW-002
+    name: 幕墙玻璃厚度检查
+    description: 检查幕墙玻璃标注厚度是否满足最小厚度要求
+    discipline: curtain_wall
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 82
+    standard_code: JGJ102-2003
+    standard_clause: "6.2.1"
+    clause_text: "幕墙玻璃厚度不应小于6mm，夹层玻璃和中空玻璃的各片玻璃厚度不应小于5mm"
+    target_object: ["幕墙玻璃", "玻璃面板"]
+    target_property: "玻璃厚度"
+    operator: ">="
+    limit_value: 6
+    unit: mm
+    keywords: ["玻璃", "玻璃厚度", "幕墙玻璃", "中空玻璃"]
+    suggestion_template: "幕墙玻璃厚度不足6mm，请按规范要求增加玻璃厚度"
+    applicable_building_types: ["全部"]
+
+  - id: CW-003
+    name: 幕墙密封胶类型标注检查
+    description: 检查图纸中是否标注幕墙密封胶的类型和性能要求
+    discipline: curtain_wall
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 75
+    standard_code: GB/T21086-2007
+    standard_clause: "5.6.2"
+    clause_text: "幕墙用密封胶应根据幕墙类型和使用部位选用硅酮结构密封胶、硅酮耐候密封胶等，并应在设计文件中注明"
+    target_object: ["密封胶", "幕墙密封胶"]
+    target_property: "应标注密封胶类型"
+    keywords: ["密封胶", "硅酮胶", "结构胶", "耐候胶"]
+    suggestion_template: "补充标注幕墙密封胶的类型（硅酮结构密封胶/耐候密封胶）及相应性能指标"
+    applicable_building_types: ["全部"]
+
+  - id: CW-004
+    name: 幕墙防火封堵设置检查
+    description: 检查幕墙楼层间防火封堵做法是否标注完整
+    discipline: curtain_wall
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 92
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.2.6"
+    clause_text: "建筑幕墙在每层楼板外沿处应采用耐火极限不低于1.00h的防火封堵材料封堵"
+    target_object: ["幕墙防火封堵", "楼层防火"]
+    target_property: "应标注防火封堵做法"
+    keywords: ["防火封堵", "幕墙防火", "防火", "层间封堵"]
+    suggestion_template: "补充标注幕墙楼层间防火封堵做法及材料，确保耐火极限≥1.00h"
+    applicable_building_types: ["全部"]
+
+  - id: CW-005
+    name: 幕墙避雷连接标注检查
+    description: 检查幕墙防雷接地连接做法是否标注完整
+    discipline: curtain_wall
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 78
+    standard_code: GB50057-2010
+    standard_clause: "4.3.3"
+    clause_text: "幕墙金属框架应与主体结构的防雷系统可靠连接，连接点间距不应大于18m"
+    target_object: ["幕墙避雷", "幕墙防雷"]
+    target_property: "应标注避雷连接做法"
+    keywords: ["避雷", "防雷", "接地", "幕墙", "均压环"]
+    suggestion_template: "补充标注幕墙防雷接地连接做法，明确连接点间距和连接方式"
+    applicable_building_types: ["全部"]

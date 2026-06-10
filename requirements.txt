@@ -1,0 +1,55 @@
+# AI CAD Audit System - Dependencies
+# Python >= 3.10
+# Install: pip install -r requirements.txt
+
+# ============================================================
+# Core Dependencies
+# ============================================================
+
+# DXF/DWG drawing parsing
+ezdxf>=1.2.0
+
+# Numerical computing & spatial analysis
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-learn>=1.2.0
+
+# Spatial indexing (collision detection acceleration)
+rtree>=1.1.0
+
+# Geometry computation
+shapely>=2.0.1
+
+# YAML config parsing
+pyyaml>=6.0
+
+# HTTP client (LLM API calls)
+requests>=2.28.0
+
+# Config encryption (API key secure storage)
+cryptography>=41.0.0
+
+# Image processing (large image compression)
+Pillow>=10.0.0
+
+# Report generation (.docx)
+python-docx>=0.8.11
+
+# ============================================================
+# Web UI Dependencies
+# ============================================================
+
+flask>=3.0.0
+
+# ============================================================
+# LLM API Dependencies (optional, not needed for offline mode)
+# ============================================================
+
+# OpenAI-compatible LLM providers (ZhipuAI/DeepSeek/Tongyi/Moonshot/Doubao/Ollama)
+openai>=1.0.0
+
+# ============================================================
+# Development / Testing
+# ============================================================
+
+pytest>=7.0.0
