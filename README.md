@@ -8,6 +8,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-brightgreen.svg)](CONTRIBUTING.md)
 
+<br>
+
+[![Architecture](https://img.shields.io/badge/topic-architecture-8A2BE2)](https://github.com/topics/architecture)
+[![CAD](https://img.shields.io/badge/topic-cad-FF6B35)](https://github.com/topics/cad)
+[![BIM](https://img.shields.io/badge/topic-bim-007EC6)](https://github.com/topics/bim)
+[![AI](https://img.shields.io/badge/topic-ai-00BCD4)](https://github.com/topics/ai)
+[![LLM](https://img.shields.io/badge/topic-llm-9C27B0)](https://github.com/topics/llm)
+[![DXF](https://img.shields.io/badge/topic-dxf-607D8B)](https://github.com/topics/dxf)
+[![Engineering](https://img.shields.io/badge/topic-engineering-E91E63)](https://github.com/topics/engineering)
+[![Construction](https://img.shields.io/badge/topic-construction-FF9800)](https://github.com/topics/construction)
+[![Building](https://img.shields.io/badge/topic-building-795548)](https://github.com/topics/building)
+[![Computer Vision](https://img.shields.io/badge/topic-computer--vision-4CAF50)](https://github.com/topics/computer-vision)
+
 [English](#features) | [中文](#功能特性)
 
 </div>
