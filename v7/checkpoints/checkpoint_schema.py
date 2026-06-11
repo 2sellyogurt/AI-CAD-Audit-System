@@ -193,6 +193,7 @@ class CheckResult:
         return {
             "checkpoint_id": self.checkpoint_id,
             "checkpoint_name": self.checkpoint_name,
+            "discipline": self.discipline,
             "verdict": self.verdict,
             "confidence": self.confidence,
             "severity": self.severity,
