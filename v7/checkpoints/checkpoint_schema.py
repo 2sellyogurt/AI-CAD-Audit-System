@@ -166,6 +166,7 @@ class ExecutionStatus(str, Enum):
 class CheckResult:
     checkpoint_id: str
     checkpoint_name: str
+    discipline: str = ""  # 所属专业
     verdict: str = ""
     confidence: str = "medium"
     severity: str = ""
