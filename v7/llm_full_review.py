@@ -5,7 +5,7 @@ LLM代理全流程审查 — 支持两种模式：
   2. CACHED 模式：使用预编写的审查数据（离线可用，无需 API Key）
 """
 
-import json, os, sys, re, time
+import json, os, sys, re, time, logging
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum

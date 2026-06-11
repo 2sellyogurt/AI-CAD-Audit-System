@@ -4,6 +4,7 @@
 每个Agent=独立的角色人设+专属规范库+图纸过滤+检查点集。
 """
 
+import logging
 from typing import Any, Dict, List
 
 from .base_agent import BaseAgent, AgentConfig, AgentReport

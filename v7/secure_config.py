@@ -6,7 +6,9 @@
 - 主密钥来源：环境变量 AI_REVIEW_MASTER_KEY 或机器指纹
 """
 
-import os, json, hashlib, base64, uuid
+import os, json, hashlib, base64, uuid, logging
+
+logger = logging.getLogger(__name__)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONFIG_FILE = os.path.join(HERE, ".encrypted_keys.json")
