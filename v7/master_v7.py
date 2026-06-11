@@ -104,7 +104,7 @@ def run_dry_run(args):
                     checkpoint_id=cp.id, checkpoint_name=cp.name,
                     verdict="不合规", confidence="high", severity=cp.severity.value,
                     standard_code=cp.standard_code, standard_clause=cp.standard_clause,
-                    route_used="text", model_used="dry-run"
+                    route_used="text", model_used="dry-run", discipline=cp.discipline.value
                 )
                 pool.add_from_checkpoint(sim_result, d.text_entities[0] if d.text_entities else None, agent_name="建筑Agent")
     print(f"  问题池: {len(pool._issues)} 个模拟问题")
