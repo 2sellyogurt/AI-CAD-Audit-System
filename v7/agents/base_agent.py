@@ -130,7 +130,7 @@ class BaseAgent(ABC):
             return self._report
         return self._execute_core(drawings, problem_pool, image_paths, skip_severities)
 
-    _TEXT_BATCH_CHARS = 90000
+    _TEXT_BATCH_CHARS = 90000  # 每批文本的最大字符数，控制LLM请求长度
 
     @staticmethod
     def _build_drawing_batches(drawings, image_paths=None):

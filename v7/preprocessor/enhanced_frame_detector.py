@@ -16,22 +16,10 @@ import logging
 from typing import Dict, List, Optional, Tuple
 
 import ezdxf
-from ezdxf.math import BoundingBox2d
 
 logger = logging.getLogger("v7.enhanced_frame_detector")
 
-STANDARD_FRAMES = {
-    "A0": (1189, 841),
-    "A1": (841, 594),
-    "A2": (594, 420),
-    "A3": (420, 297),
-    "A4": (297, 210),
-    "A0+": (1189 * 1.25, 841 * 1.25),
-    "A1+": (841 * 1.25, 594 * 1.25),
-    "A2+": (594 * 1.25, 420 * 1.25),
-    "A0++": (1189 * 1.5, 841 * 1.5),
-    "A1++": (841 * 1.5, 594 * 1.5),
-}
+from .constants import STANDARD_FRAMES
 
 TITLE_BLOCK_KEYWORDS = [
     "设计", "审核", "校对", "审定", "批准", "项目负责人",
@@ -73,14 +61,7 @@ def _match_frame_relaxed(w: float, h: float, tolerance: float = 0.30) -> Optiona
     return _match_frame(w, h, tolerance)
 
 
-def _try_build_rtree():
-    try:
-        from rtree import index
-        p = index.Property()
-        p.dimension = 2
-        return index, p
-    except ImportError:
-        return None, None
+
 
 
 def _get_text_in_bbox(msp, x_min: float, y_min: float, x_max: float, y_max: float,
@@ -159,12 +140,10 @@ class EnhancedFrameDetector:
     """增强图框检测器"""
 
     def __init__(self, min_size_mm: float = 200, text_verify: bool = True,
-                 use_rtree: bool = True, tolerance: float = 0.15):
+                 tolerance: float = 0.15):
         self.min_size_mm = min_size_mm
         self.text_verify = text_verify
-        self.use_rtree = use_rtree
         self.tolerance = tolerance
-        self._rtree_index_cls, self._rtree_prop = _try_build_rtree()
 
     def detect_frames(self, dxf_path: str) -> List[Tuple[str, float, float, float, float]]:
         return self._detect_from_dxf(dxf_path)

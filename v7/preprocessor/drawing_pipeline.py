@@ -48,10 +48,8 @@ def setup_args():
     p.add_argument("--scan-only", action="store_true", help="仅扫描统计，不拆分")
     p.add_argument("--no-convert", action="store_true", help="跳过DWG→DXF转换")
     p.add_argument("--no-split", action="store_true", help="只检测不拆分")
-    p.add_argument("--text-verify", action="store_true", default=True,
-                   help="启用图框文字语义验证（默认开启）")
     p.add_argument("--no-text-verify", action="store_true",
-                   help="禁用图框文字语义验证")
+                   help="禁用图框文字语义验证（默认开启）")
     p.add_argument("--tolerance", type=float, default=0.15,
                    help="图框尺寸容差（默认0.15）")
     p.add_argument("--split-margin", type=float, default=50.0,
@@ -223,6 +221,7 @@ def extract_metadata_batch(dxf_dir: str, output_dir: str,
     from v7.preprocessor.title_block_extractor import TitleBlockExtractor
     import glob
 
+    detector = None
     if pre_detected_frames is None:
         from v7.preprocessor.enhanced_frame_detector import EnhancedFrameDetector
         detector = EnhancedFrameDetector(
@@ -242,7 +241,7 @@ def extract_metadata_batch(dxf_dir: str, output_dir: str,
         entry = pre_detected_frames.get(name) if pre_detected_frames else None
         if entry is None:
             try:
-                if pre_detected_frames is None:
+                if detector is not None:
                     frames = detector.detect_frames(dxf)
                 else:
                     frames = None
@@ -356,6 +355,8 @@ def main():
 
     if args.no_text_verify:
         args.text_verify = False
+    else:
+        args.text_verify = True  # 默认开启
 
     project_output = os.path.join(_parent, "output_v7.0")
     output_dir = args.output or os.path.join(project_output, "split_annotated")

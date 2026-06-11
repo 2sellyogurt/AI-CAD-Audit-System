@@ -74,7 +74,9 @@ class DXFMarker:
             desc = c.get("description", "")[:80]
             std = c.get("std", "")[:60]
 
-            cx, cy = 0, 0
+            coords = c.get("cad_coords", c.get("coords", {}))
+            cx = coords.get("x", 0)
+            cy = coords.get("y", 0)
             desc_text = desc
             for part in desc.split("区域"):
                 desc_text = part

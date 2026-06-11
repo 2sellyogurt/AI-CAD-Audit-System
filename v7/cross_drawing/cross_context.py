@@ -57,9 +57,6 @@ class DrawingMeta:
     fire_ratings: Set[str] = field(default_factory=set)
 
 
-AXIS_PATTERN = re.compile(r'([①②③④⑤⑥⑦⑧⑨⑩]|[A-HJ-Z]|[1-9]\d*)\s*[轴轴]\s*[-~—–]\s*([①②③④⑤⑥⑦⑧⑨⑩]|[A-HJ-Z]|[1-9]\d*)\s*[轴轴]?', re.IGNORECASE)
-AXIS_NUMBER_PATTERN = re.compile(r'(?:轴|轴号)[:\s]*([A-HJ-Za-hj-z]\d*[\s,，、]+[A-HJ-Za-hj-z]\d*)', re.IGNORECASE)
-SINGLE_AXIS_PATTERN = re.compile(r'\(?([①②③④⑤⑥⑦⑧⑨⑩]|[A-HJ-Z]|[1-9]\d*)\s*[轴轴]\)?', re.IGNORECASE)
 FLOOR_PATTERN = re.compile(r'([一二三四五六七八九十\d]+|[B][F\d]*|[地下]+\d*)\s*[层Ff]', re.IGNORECASE)
 ROOM_LABEL_PATTERN = re.compile(r'([A-Z\u4e00-\u9fff]{2,6})\s*(办公室|实验室|教室|宿舍|卫生间|配电房|机房|控制室|泵房|风机房|电梯厅|前室|走道|楼梯间|门厅|大堂|会议室|资料室|仓库|厨房|餐厅|休息室|更衣室|值班室)', re.IGNORECASE)
 DIMENSION_PATTERN = re.compile(r'(?:宽|长|深|高|净宽|净高|间距|距离|开间|进深|跨)[度]?\s*[:：]?\s*([\d.]+\s*[mM米毫厘cm])', re.IGNORECASE)
@@ -67,6 +64,12 @@ GENERIC_DIM_PATTERN = re.compile(r'(\d{2,5})\s*(?:mm|M\b|米)', re.IGNORECASE)
 ELEVATION_PATTERN = re.compile(r'(?:标高|EL|±)\s*[：:]?\s*([+-]?\d+\.?\d*)\s*[mM]?', re.IGNORECASE)
 FIRE_RATING_PATTERN = re.compile(r'(?:耐火等级|耐火极限|防火等级)\s*[:：]?\s*([一二三四I]+[级]?)', re.IGNORECASE)
 FIRE_RATING_NUM_PATTERN = re.compile(r'[耐]*火[极等限]*[级]*\s*[:：]?\s*(\d+\.?\d*)\s*[hH小]', re.IGNORECASE)
+
+# 预编译 _extract_axis_sets 使用的正则（提取到模块级避免重复编译）
+_AXIS_RANGE_X = re.compile(r'[①②③④⑤⑥⑦⑧⑨⑩\d]+[轴轴线]*\s*[-~—–]\s*[①②③④⑤⑥⑦⑧⑨⑩\d]+[轴轴线]*')
+_AXIS_RANGE_Y = re.compile(r'[A-HJ-Za-hj-z]+[轴轴线]*\s*[-~—–]\s*[A-HJ-Za-hj-z]+[轴轴线]*')
+_AXIS_SINGLE = re.compile(r'(?:[①②③④⑤⑥⑦⑧⑨⑩\d]|[A-HJ-Za-hj-z])\s*[轴轴]')
+_MAX_ISSUES_PER_CHECK = 5  # 每个检查方法返回的最大问题数
 
 
 class CrossDrawingContext:
@@ -134,15 +137,11 @@ class CrossDrawingContext:
     @staticmethod
     def _extract_axis_sets(text: str, direction: str) -> Set[str]:
         values: Set[str] = set()
-        if direction == "x":
-            pattern = re.compile(r'[①②③④⑤⑥⑦⑧⑨⑩\d]+[轴轴线]*\s*[-~—–]\s*[①②③④⑤⑥⑦⑧⑨⑩\d]+[轴轴线]*')
-        else:
-            pattern = re.compile(r'[A-HJ-Za-hj-z]+[轴轴线]*\s*[-~—–]\s*[A-HJ-Za-hj-z]+[轴轴线]*')
+        pattern = _AXIS_RANGE_X if direction == "x" else _AXIS_RANGE_Y
         for m in pattern.finditer(text):
             values.add(m.group().strip())
-        singles = re.findall(r'(?:[①②③④⑤⑥⑦⑧⑨⑩\d]|[A-HJ-Za-hj-z])\s*[轴轴]', text)
-        for s in singles:
-            values.add(s.strip())
+        for m in _AXIS_SINGLE.finditer(text):
+            values.add(m.group().strip())
         return values
 
     @staticmethod
@@ -211,7 +210,7 @@ class CrossDrawingContext:
                         evidence_a=", ".join(sorted(a.axis_range_x)[:10]),
                         evidence_b=", ".join(sorted(b.axis_range_x)[:10]),
                     ))
-        return issues[:5]
+        return issues[:_MAX_ISSUES_PER_CHECK]
 
     def _check_floor_consistency(self, metas: List[DrawingMeta]) -> List[CrossDrawingIssue]:
         issues: List[CrossDrawingIssue] = []
@@ -237,7 +236,7 @@ class CrossDrawingContext:
                         evidence_a=", ".join(sorted(m.floor_labels)),
                         evidence_b=", ".join(sorted(missing)),
                     ))
-        return issues[:5]
+        return issues[:_MAX_ISSUES_PER_CHECK]
 
     def _check_room_label_consistency(self, metas: List[DrawingMeta]) -> List[CrossDrawingIssue]:
         issues: List[CrossDrawingIssue] = []
@@ -259,7 +258,7 @@ class CrossDrawingContext:
                             drawing_a=a.name, drawing_b=b.name,
                             evidence_a=dm_a[0][0], evidence_b=dm_b[0][0],
                         ))
-        return issues[:5]
+        return issues[:_MAX_ISSUES_PER_CHECK]
 
     def _check_dimension_consistency(self, metas: List[DrawingMeta]) -> List[CrossDrawingIssue]:
         issues: List[CrossDrawingIssue] = []
@@ -280,7 +279,7 @@ class CrossDrawingContext:
                         drawing_a=bm.name, drawing_b=sm.name,
                         evidence_a="", evidence_b="",
                     ))
-        return issues[:5]
+        return issues[:_MAX_ISSUES_PER_CHECK]
 
     def _check_elevation_consistency(self, metas: List[DrawingMeta]) -> List[CrossDrawingIssue]:
         issues: List[CrossDrawingIssue] = []
@@ -293,6 +292,25 @@ class CrossDrawingContext:
                 common_vals = a_vals & b_vals
                 if common_vals:
                     continue
+                # 改进的基准面判断：同时检查最小值和最大值偏移
+                if a_vals and b_vals:
+                    min_diff = abs(min(a_vals) - min(b_vals))
+                    max_diff = abs(max(a_vals) - max(b_vals)) if len(a_vals) > 1 and len(b_vals) > 1 else min_diff
+                    if min_diff < 0.5 and max_diff < 0.5:
+                        continue
+                    # 系统性偏移（各标高差值一致）→ 不同基准面
+                    if len(a_vals) > 1 and len(b_vals) > 1 and abs(min_diff - max_diff) < 0.5:
+                        issues.append(CrossDrawingIssue(
+                            issue_type="elevation_datum_mismatch",
+                            severity="B",
+                            description=f"{a.name}({a.discipline})与{b.name}({b.discipline})的标高存在系统性偏移({min_diff:.2f}m)，可能使用了不同的基准面",
+                            suggestion="确认两图纸是否使用同一标高基准（如均为±0.000=绝对标高），如不同需换算",
+                            drawing_a=a.name, drawing_b=b.name,
+                            evidence_a=str(sorted(a_vals)[:5]),
+                            evidence_b=str(sorted(b_vals)[:5]),
+                        ))
+                        continue
+                # 非系统性差异：检查单值不匹配
                 if a_vals and b_vals and abs(min(a_vals) - min(b_vals)) < 0.5:
                     continue
                 if len(a_vals) > 1 and len(b_vals) > 1:
@@ -305,7 +323,7 @@ class CrossDrawingContext:
                         evidence_a=str(sorted(a_vals)[:5]),
                         evidence_b=str(sorted(b_vals)[:5]),
                     ))
-        return issues[:5]
+        return issues[:_MAX_ISSUES_PER_CHECK]
 
     def _check_fire_rating_consistency(self, metas: List[DrawingMeta]) -> List[CrossDrawingIssue]:
         issues: List[CrossDrawingIssue] = []
@@ -323,4 +341,4 @@ class CrossDrawingContext:
                         evidence_a=", ".join(sorted(fm.fire_ratings)),
                         evidence_b=", ".join(sorted(bm.fire_ratings)),
                     ))
-        return issues[:5]
+        return issues[:_MAX_ISSUES_PER_CHECK]

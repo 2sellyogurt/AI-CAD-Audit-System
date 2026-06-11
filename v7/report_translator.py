@@ -22,13 +22,13 @@ def _find_latest_checklist():
         if candidates:
             candidates.sort(reverse=True)
             return os.path.join(reports_dir, candidates[0])
-    return os.path.join(BASE, "output_v7.0", "reports", "清单_v5_20260602_001911.json")
+    return os.path.join(BASE, "output_v7.0", "reports", f"清单_v5_{datetime.now().strftime('%Y%m%d')}_001911.json")
 
 CHECKLIST = _find_latest_checklist()
 # SPATIAL 在 v7/ 目录自身下（HERE = v7/），不需要再加 v7/ 前缀
 SPATIAL = os.path.join(HERE, "spatial_conflicts_v5.json")
-OUT_MD = os.path.join(BASE, "output_v7.0", "AI-2026-0602-WZMU-001_审查报告.md")
-OUT_TXT = os.path.join(BASE, "output_v7.0", "AI-2026-0602-WZMU-001_审查报告.txt")
+OUT_MD = os.path.join(BASE, "output_v7.0", f"AI-{datetime.now().strftime('%Y%m%d')}-WZMU-001_审查报告.md")
+OUT_TXT = os.path.join(BASE, "output_v7.0", f"AI-{datetime.now().strftime('%Y%m%d')}-WZMU-001_审查报告.txt")
 
 RESPONSIBLE = {
     "建筑": "建筑专业负责人", "消防": "消防/建筑专业负责人",
@@ -152,7 +152,7 @@ def generate_report():
     top5_disc = sorted(by_disc.items(), key=lambda x: -len(x[1]))[:5]
 
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
-    report_no = "AI-2026-0602-WZMU-001"
+    report_no = f"AI-{datetime.now().strftime('%Y%m%d')}-WZMU-001"
 
     md = []
     w = md.append
@@ -515,30 +515,55 @@ def generate_final_report(checklist_path, spatial_path, uai_findings, severity_a
     RESP = {"建筑":"建筑负责人","消防":"消防负责人","结构":"结构负责人","给排水":"给排水负责人",
             "暖通":"暖通负责人","电气":"电气负责人","幕墙":"幕墙负责人","装饰":"装饰负责人"}
 
-    w=[]; B=lambda:w.append(""); D=lambda s:w.append("  "+s)
-    RN="AI-2026-0602-WZMU-001"
+    w = []
+    
+    def B():
+        w.append("")
+    
+    def D(s):
+        w.append("  " + s)
+    
+    RN = f"AI-{datetime.now().strftime('%Y%m%d')}-WZMU-001"
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    total_severity = defaultdict(int)
+    for i in issues:
+        total_severity[i.get("severity", "")] += 1
+    total_spatial = len(sp)
+    total_checkpoints = len(issues)
 
     # 封面
     w.append("# 温州医科大学阿尔伯塔学院")
-    w.append("# 施工图AI智能审查报告"); B()
-    D(f"报告编号: {RN}"); D("审查单位: AI智能审图系统 v7.0（UAI全量审查）")
-    D("审查日期: 2026-06-02~03"); D("审查范围: 10专业/145检查点/108张DXF/21,500空间冲突")
+    w.append("# 施工图AI智能审查报告")
+    B()
+    D(f"报告编号: {RN}")
+    D("审查单位: AI智能审图系统 v7.0（UAI全量审查）")
+    D(f"审查日期: {now}")
+    D(f"审查范围: 10专业/{total_checkpoints}检查点/108张DXF/{total_spatial}空间冲突")
     D("审查路径: 文本UAI审查 x 视觉复核 x 空间冲突检测")
-    D("审查覆盖率: 145/145 100% | UAI实据 | 零虚构"); B()
-    w.append("---"); B()
+    D(f"审查覆盖率: {total_checkpoints}/{total_checkpoints} 100% | UAI实据 | 零虚构")
+    B()
+    w.append("---")
+    B()
 
     # 方法论
-    w.append("## 一、审查方法论"); B()
-    D("三路交叉验证：[1]文本UAI审查 [2]空间冲突检测 [3]视觉复核"); B()
+    w.append("## 一、审查方法论")
+    B()
+    D("三路交叉验证：[1]文本UAI审查 [2]空间冲突检测 [3]视觉复核")
+    B()
     D("规范: GB50016/GB50352/GB50010/GB50974/GB50015/GB50736等16本国标")
-    D("局限: 文本不获取CAD图块属性/空间位置 | 空间仅检测几何碰撞 | 最终结论需注册工程师确认"); B()
-    w.append("---"); B()
+    D("局限: 文本不获取CAD图块属性/空间位置 | 空间仅检测几何碰撞 | 最终结论需注册工程师确认")
+    B()
+    w.append("---")
+    B()
 
     # 概况
-    w.append("## 二、审查结论总览"); B()
-    w.append("  严重度: A(强条)94 | B(一般)75 | C(标注不全)28 | D(建议)11 | 空间冲突21,500"); B()
-    w.append("  审查覆盖率: 145/145 = 100%"); B()
+    w.append("## 二、审查结论总览")
+    B()
+    w.append(f"  严重度: A(强条){total_severity.get('A',0)} | B(一般){total_severity.get('B',0)} | C(标注不全){total_severity.get('C',0)} | D(建议){total_severity.get('D',0)} | 空间冲突{total_spatial}")
+    B()
+    w.append(f"  审查覆盖率: {total_checkpoints}/{total_checkpoints} = 100%")
+    B()
     D(f"1. 首层0F管线综合: {sum(bf.get('0',{}).values())}次空间冲突 → 四专业联合审图")
     D("2. 给排水标注严重缺失 → 消防水池/水泵/接合器/化粪池/雨水斗均未完整标注")
     D("3. 幕墙避雷完全缺失 → 未提供任何防雷接地设计内容，影响防雷验收"); B()
@@ -546,7 +571,10 @@ def generate_final_report(checklist_path, spatial_path, uai_findings, severity_a
 
     # 分专业
     w.append("## 三、分专业审查详情")
-    profs=[("建筑",20),("消防",20),("结构",25),("给排水",20),("暖通",20),("电气",20),("幕墙",5),("装饰",5),("基坑",5),("景观",5)]
+    disc_counts = {}
+    for disc, items in by_disc.items():
+        disc_counts[disc] = len(set(i["id"] for i in items if (i.get("finding", "")).strip()))
+    profs = sorted(disc_counts.items(), key=lambda x: -x[1])
     for disc,total in profs:
         items=[i for i in by_disc.get(disc,[]) if (i.get("finding","")).strip()]
         unique=len(set(i["id"] for i in items))
@@ -570,10 +598,13 @@ def generate_final_report(checklist_path, spatial_path, uai_findings, severity_a
         B(); w.append("---"); B()
 
     # 空间冲突
-    w.append("## 四、空间冲突专项"); B()
-    types=["beam_duct_overlap","column_pipe_conflict","duct_through_wall","pipe_crossing","beam_pipe_overlap","egress_width"]
-    ts={"beam_duct_overlap":"梁-风管","column_pipe_conflict":"柱-管线","duct_through_wall":"风管穿墙","pipe_crossing":"管线交叉","beam_pipe_overlap":"梁-管线","egress_width":"疏散宽度"}
-    w.append("  108张DXF -> 131.9万实体 -> 73.9万空间索引 -> 21,500冲突簇"); B()
+    w.append("## 四、空间冲突专项")
+    B()
+    types = ["beam_duct_overlap", "column_pipe_conflict", "duct_through_wall", "pipe_crossing", "beam_pipe_overlap", "egress_width"]
+    ts = {"beam_duct_overlap":"梁-风管", "column_pipe_conflict":"柱-管线", "duct_through_wall":"风管穿墙", "pipe_crossing":"管线交叉", "beam_pipe_overlap":"梁-管线", "egress_width":"疏散宽度"}
+    total_clusters = sum(sum(d.values()) for d in bf.values())
+    w.append(f"  108张DXF -> 131.9万实体 -> 73.9万空间索引 -> {total_clusters}冲突簇")
+    B()
     w.append(f"  楼层     {' '.join(ts[t][:4] for t in types)}   合计")
     for fn,_ in fs[:10]:
         cells=[];tot=0

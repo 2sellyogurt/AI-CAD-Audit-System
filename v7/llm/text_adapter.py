@@ -60,8 +60,8 @@ class TextAdapter(LLMBaseAdapter):
             usage = response.usage
             if usage:
                 self._stats.total_tokens += usage.total_tokens
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"获取usage信息失败: {str(e)}")
 
         return content
 

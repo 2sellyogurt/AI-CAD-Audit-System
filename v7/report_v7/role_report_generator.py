@@ -12,8 +12,23 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
+
+# 风险评分权重
+_RISK_WEIGHT_A = 10
+_RISK_WEIGHT_B = 3
+_RISK_WEIGHT_C = 1
+_RISK_THRESHOLD_HIGH = 30  # 高风险
+_RISK_THRESHOLD_MED = 10   # 中风险
+
+# 成本估算系数
+_A_COST_MIN = 5    # A级问题最低成本（万元）
+_A_COST_MAX = 20   # A级问题最高成本（万元）
+_B_COST_MIN = 1    # B级问题最低成本（万元）
+_B_COST_MAX = 5    # B级问题最高成本（万元）
+_C_COST_MIN = 0.1  # C级问题最低成本（万元）
+_C_COST_MAX = 1    # C级问题最高成本（万元）
 
 
 def generate_role_report(
@@ -120,7 +135,7 @@ def _generate_supervisor_report(
 
     lines = []
     lines.append("# 施工图审查报告（建设单位/监理用）\n")
-    lines.append(f"> 生成时间: {datetime.now().isoformat()}")
+    lines.append(f"> 生成时间: {datetime.now(timezone.utc).isoformat()}")
     lines.append(f"> 适用对象: 建设单位项目负责人、监理工程师\n")
     lines.append("## 一、审查概况\n")
     lines.append(f"本次审查共发现 **{total}** 个问题：")
@@ -181,7 +196,7 @@ def _generate_designer_report(
 
     lines = []
     lines.append("# 施工图审查回复单（设计院用）\n")
-    lines.append(f"> 生成时间: {datetime.now().isoformat()}")
+    lines.append(f"> 生成时间: {datetime.now(timezone.utc).isoformat()}")
     lines.append(f"> 适用对象: 各专业设计负责人\n")
     lines.append(f"## 审查问题汇总（共{total}项）\n")
 
@@ -228,7 +243,7 @@ def _generate_checker_report(
 
     lines = []
     lines.append("# 施工图设计文件审查报告\n")
-    lines.append(f"> 报告编号: AI-{datetime.now().strftime('%Y%m%d-%H%M%S')}")
+    lines.append(f"> 报告编号: AI-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}")
     lines.append(f"> 审查结论: {'不合格' if severity_counts['A'] > 0 else '基本合格'}\n")
 
     lines.append("## 一、审查结论\n")
@@ -293,12 +308,12 @@ def _generate_owner_report(
     total = len(issues)
     classified = _classify_issues(issues)
 
-    risk_score = severity_counts["A"] * 10 + severity_counts["B"] * 3 + severity_counts["C"] * 1
-    if risk_score >= 30:
+    risk_score = severity_counts["A"] * _RISK_WEIGHT_A + severity_counts["B"] * _RISK_WEIGHT_B + severity_counts["C"] * _RISK_WEIGHT_C
+    if risk_score >= _RISK_THRESHOLD_HIGH:
     # 高——估算每10个A级问题可能增加工期1个月
         risk_level = "高"
         estimated_delay = max(severity_counts["A"] // 10, 1)
-    elif risk_score >= 10:
+    elif risk_score >= _RISK_THRESHOLD_MED:
         risk_level = "中"
         estimated_delay = 0
     else:
@@ -307,7 +322,7 @@ def _generate_owner_report(
 
     lines = []
     lines.append("# 项目设计质量评估报告（业主用）\n")
-    lines.append(f"> 生成时间: {datetime.now().isoformat()}")
+    lines.append(f"> 生成时间: {datetime.now(timezone.utc).isoformat()}")
     lines.append(f"> 适用对象: 建设单位决策层\n")
 
     lines.append("## 一、质量评估结论\n")
@@ -337,11 +352,11 @@ def _generate_owner_report(
     lines.append("## 三、总投资影响评估\n")
     lines.append("| 严重等级 | 数量 | 单项预估增加成本 | 总影响 |")
     lines.append("|---------|------|----------------|--------|")
-    lines.append(f"| A级（强条） | {severity_counts['A']}项 | 5-20万元 | {severity_counts['A']*5}-{severity_counts['A']*20}万元 |")
-    lines.append(f"| B级（一般） | {severity_counts['B']}项 | 1-5万元 | {severity_counts['B']*1}-{severity_counts['B']*5}万元 |")
-    lines.append(f"| C级（建议） | {severity_counts['C']}项 | 0.1-1万元 | {severity_counts['C']*0.1}-{severity_counts['C']*1}万元 |")
-    total_min = severity_counts["A"]*5 + severity_counts["B"]*1 + severity_counts["C"]*0.1
-    total_max = severity_counts["A"]*20 + severity_counts["B"]*5 + severity_counts["C"]*1
+    lines.append(f"| A级（强条） | {severity_counts['A']}项 | {_A_COST_MIN}-{_A_COST_MAX}万元 | {severity_counts['A']*_A_COST_MIN}-{severity_counts['A']*_A_COST_MAX}万元 |")
+    lines.append(f"| B级（一般） | {severity_counts['B']}项 | {_B_COST_MIN}-{_B_COST_MAX}万元 | {severity_counts['B']*_B_COST_MIN}-{severity_counts['B']*_B_COST_MAX}万元 |")
+    lines.append(f"| C级（建议） | {severity_counts['C']}项 | {_C_COST_MIN}-{_C_COST_MAX}万元 | {severity_counts['C']*_C_COST_MIN}-{severity_counts['C']*_C_COST_MAX}万元 |")
+    total_min = severity_counts["A"]*_A_COST_MIN + severity_counts["B"]*_B_COST_MIN + severity_counts["C"]*_C_COST_MIN
+    total_max = severity_counts["A"]*_A_COST_MAX + severity_counts["B"]*_B_COST_MAX + severity_counts["C"]*_C_COST_MAX
     lines.append(f"\n**预估整改总成本**: {total_min:.1f} ~ {total_max:.1f}万元\n")
 
     lines.append("## 四、决策建议\n")

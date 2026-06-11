@@ -45,7 +45,7 @@ DEFAULT_RULES: List[AnnotationRule] = [
     ),
     AnnotationRule(
         id="STD-003", name="窗必须有尺寸和窗台高度标注", discipline="building",
-        component_pattern=r"(窗\s*[C|c]\d+|C\d+|LC\d+)",
+        component_pattern=r"(窗\s*[Cc]\d+|C\d+|LC\d+)",
         required_properties=[r"\d{3,4}\s*[xX×]\s*\d{3,4}", r"台高|窗台"],
         description="窗标注必须包含尺寸和窗台高度"
     ),
@@ -57,7 +57,7 @@ DEFAULT_RULES: List[AnnotationRule] = [
     ),
     AnnotationRule(
         id="STD-005", name="房间必须有名称标注", discipline="building",
-        component_pattern=r"",
+        component_pattern=r".",  # 匹配所有文本（房间标注位置不确定）
         required_properties=[r"间|室|厅|房|库|站"],
         description="各功能房间必须有房间名称标注"
     ),
@@ -65,13 +65,13 @@ DEFAULT_RULES: List[AnnotationRule] = [
     # ===== 结构专业 (STD-006~012) =====
     AnnotationRule(
         id="STD-006", name="梁必须有截面标注", discipline="structure",
-        component_pattern=r"(梁\s*[L|l]\d+|KL\d+|LL\d+|框架梁|次梁)",
+        component_pattern=r"(梁\s*[Ll]\d+|KL\d+|LL\d+|框架梁|次梁)",
         required_properties=[r"\d{3}\s*[xX×]\s*\d{3}", r"截面", r"b\s*[xX×]\s*h"],
         description="所有梁标注必须包含截面尺寸(宽×高)"
     ),
     AnnotationRule(
         id="STD-007", name="柱必须有截面标注", discipline="structure",
-        component_pattern=r"(柱\s*[Z|z]\d+|KZ\d+|框架柱)",
+        component_pattern=r"(柱\s*[Zz]\d+|KZ\d+|框架柱)",
         required_properties=[r"\d{3}\s*[xX×]\s*\d{3}", r"截面"],
         description="所有柱标注必须包含截面尺寸"
     ),
@@ -268,8 +268,14 @@ class StandardizationChecker:
             all_components_ok = True
             for comp in components:
                 missing = []
-                for prop in rule.required_properties:
+                idx = text.find(comp)
+                if idx >= 0:
+                    context_start = max(0, idx - 150)
+                    context_end = min(len(text), idx + len(comp) + 150)
+                    search_text = text[context_start:context_end]
+                else:
                     search_text = text
+                for prop in rule.required_properties:
                     if not re.search(prop, search_text, re.IGNORECASE):
                         missing.append(prop)
                 if missing:

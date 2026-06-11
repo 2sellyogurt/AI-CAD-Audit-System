@@ -218,7 +218,7 @@ def llm_call_json(
     raw, provider = factory.call_with_failover(prompt, system, mode, image_paths, complex_vision)
     try:
         from .base_adapter import LLMBaseAdapter
-        extracted = LLMBaseAdapter._extract_json(raw)
+        extracted = LLMBaseAdapter.extract_json(raw)
         return (json_parse(extracted), provider) if extracted else ({"raw_text": raw}, provider)
     except Exception:
         return ({"raw_text": raw}, provider)

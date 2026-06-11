@@ -88,7 +88,7 @@ class FalseNegativeAuditor:
     ) -> AuditReport:
         report = AuditReport(
             audit_time=datetime.now(timezone.utc).isoformat(),
-            audit_period=f"monthly_{datetime.now().strftime('%Y%m')}",
+            audit_period=f"monthly_{datetime.now(timezone.utc).strftime('%Y%m')}",
         )
 
         passed_results = self._get_passed_results(all_check_results)
@@ -100,6 +100,8 @@ class FalseNegativeAuditor:
         sample_size = max(1, int(len(passed_results) * self.sample_rate))
         report.sample_size = sample_size
 
+        # 基于审计周期设置随机种子，确保结果可复现
+        random.seed(report.audit_time)
         samples = random.sample(passed_results, min(sample_size, len(passed_results)))
 
         for result in samples:
@@ -116,9 +118,10 @@ class FalseNegativeAuditor:
                     text = ""
                     cp = self._engine.get(sample.checkpoint_id)
                     if cp and drawing_texts:
-                        text = drawing_texts.get(
-                            getattr(result, "drawing_name", ""), ""
-                        ) or list(drawing_texts.values())[0] if drawing_texts else ""
+                        drawing_name = getattr(result, "drawing_name", "")
+                        text = drawing_texts.get(drawing_name, "")
+                        if not text and drawing_texts:
+                            text = list(drawing_texts.values())[0]
 
                     recheck = self._engine.execute_one(
                         cp or result, text
@@ -127,10 +130,12 @@ class FalseNegativeAuditor:
                     sample.recheck_route = recheck.route_used
                     sample.recheck_confidence = recheck.confidence
 
-                    if recheck.verdict == "不合规" and sample.original_verdict == "合规":
+                    recheck_verdict = getattr(recheck, "verdict", "")
+                    if recheck_verdict == "不合规" and sample.original_verdict == "合规":
                         sample.is_false_negative = True
-                        sample.discrepancy = f"原判合规→复核判{recheck.verdict}"
+                        sample.discrepancy = f"原判合规→复核判{recheck_verdict}"
                 except Exception as e:
+                    logger.warning(f"复核异常 [{sample.issue_id}]: {e}")
                     sample.discrepancy = f"复核异常: {e}"
 
             report.samples.append(sample)

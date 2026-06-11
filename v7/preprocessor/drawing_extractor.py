@@ -90,6 +90,20 @@ CONTENT_CLASSIFICATION_KEYWORDS = {
 PREFIX_SCORE = 10
 GENERIC_SCORE = 1
 
+# 专业优先级（数字越小优先级越高）- 解决关键字冲突
+DISCIPLINE_PRIORITY = {
+    "foundation_pit": 1,
+    "curtain_wall": 2,
+    "decoration": 3,
+    "fire": 4,
+    "landscape": 5,
+    "hvac": 6,
+    "plumbing": 7,
+    "electrical": 8,
+    "structure": 9,
+    "building": 10,
+}
+
 
 def simple_text_lines(text_content: str) -> List[Any]:
     """将纯文本切分为模拟 TextEntity 列表，供内容分类使用。"""
@@ -100,6 +114,7 @@ def simple_text_lines(text_content: str) -> List[Any]:
 
 
 class DrawingExtractor:
+    _MAX_CACHE_SIZE = 100
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self._classification_rules = CLASSIFICATION_RULES
@@ -109,6 +124,7 @@ class DrawingExtractor:
             if custom:
                 self._classification_rules.update(custom)
         self._text_cache: Dict[str, str] = {}
+        self._cache_order: List[str] = []
 
     def _file_hash(self, dxf_path: str) -> str:
         if not os.path.exists(dxf_path):
@@ -123,13 +139,21 @@ class DrawingExtractor:
             return ""
 
     def _cache_key(self, dxf_path: str) -> str:
+        if not os.path.exists(dxf_path):
+            return ""
         return f"{os.path.getsize(dxf_path)}_{self._file_hash(dxf_path)[:16]}"
 
     def _cached_text(self, cache_key: str) -> Optional[str]:
         return self._text_cache.get(cache_key)
 
     def _set_cache(self, cache_key: str, text: str):
+        if cache_key in self._text_cache:
+            self._cache_order.remove(cache_key)
+        elif len(self._text_cache) >= self._MAX_CACHE_SIZE:
+            oldest_key = self._cache_order.pop(0)
+            del self._text_cache[oldest_key]
         self._text_cache[cache_key] = text
+        self._cache_order.append(cache_key)
 
     def extract_text_from_dxf(self, dxf_path: str, existing_doc=None) -> List[TextEntity]:
         try:
@@ -206,7 +230,11 @@ class DrawingExtractor:
                     weight = PREFIX_SCORE if is_prefix else GENERIC_SCORE
                     scores[discipline] = scores.get(discipline, 0) + weight
         if scores:
-            return max(scores, key=scores.get)
+            max_score = max(scores.values())
+            top_disciplines = [d for d, s in scores.items() if s == max_score]
+            if len(top_disciplines) == 1:
+                return top_disciplines[0]
+            return min(top_disciplines, key=lambda d: DISCIPLINE_PRIORITY.get(d, 999))
         return "unknown"
 
     def extract_axis_markers(self, entities: List[TextEntity]) -> Dict[str, List[float]]:
@@ -238,7 +266,11 @@ class DrawingExtractor:
             if score > 0:
                 scores[discipline] = score
         if scores:
-            return max(scores, key=scores.get)
+            max_score = max(scores.values())
+            top_disciplines = [d for d, s in scores.items() if s == max_score]
+            if len(top_disciplines) == 1:
+                return top_disciplines[0]
+            return min(top_disciplines, key=lambda d: DISCIPLINE_PRIORITY.get(d, 999))
         return "unknown"
 
     def infer_all_disciplines_from_entities(
@@ -388,14 +420,14 @@ class DrawingExtractor:
         floor_patterns = [
             (r'(一|二|三|四|五|六|七|八|九|十)\s*层', None),
             (r'(\d+)\s*[Ff]', None),
-            (r'地下室|地下一层|地下二层', None),
-            (r'标准层', None),
-            (r'屋面|屋顶', None),
+            (r'(地下室|地下一层|地下二层)', None),
+            (r'B(\d+)', None),
+            (r'(屋面|屋顶)', None),
         ]
         for pat, _ in floor_patterns:
             match = re.search(pat, file_name)
             if match:
-                return match.group(0) if match.groups() else pat.replace('\\', '')
+                return match.group(0)
         return ""
 
     def process_directory(self, dxf_dir: str) -> List[DrawingInfo]:

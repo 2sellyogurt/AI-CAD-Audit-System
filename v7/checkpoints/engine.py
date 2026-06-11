@@ -176,7 +176,7 @@ class CheckpointEngine:
 
         all_grids = []
         for ep in enhanced_paths:
-            grids = split_to_grid(ep, min_density=0.005)
+            grids, _ = split_to_grid(ep, min_density=0.005)
             all_grids.extend(grids)
 
         try:
@@ -246,7 +246,7 @@ class CheckpointEngine:
             return result
 
         try:
-            extracted = LLMBaseAdapter._extract_json(raw)
+            extracted = LLMBaseAdapter.extract_json(raw)
             data = json.loads(extracted)
             result.verdict = data.get("verdict", "待核实")
             result.confidence = data.get("confidence", "medium")

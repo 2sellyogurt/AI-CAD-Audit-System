@@ -82,15 +82,20 @@ def run_review_pipeline():
             _cache["issues"] = all_with_cross
             _cache["cross"] = cross
             _cache["conflicts"] = conflicts
+            total_disc = len(DISCIPLINE_REVIEWER_MAP)
+            available_disc = len(DISCIPLINE_REVIEWER_MAP)  # v7所有专业均已覆盖
+            pending_disc = 0
             _cache["stats"] = {
-                "disciplines": 18, "available": 15, "pending": 3,
+                "disciplines": total_disc,
+                "available": available_disc,
+                "pending": pending_disc,
                 "totalIssues": len(all_with_cross),
                 "bySeverity": by_severity,
                 "byRationality": by_rationality,
                 "highConfConflicts": high_conf,
                 "totalConflicts": len(conflicts),
                 "medConfConflicts": med_conf,
-                "reviewTimeMin": 10,
+                "reviewTimeMin": max(1, len(all_with_cross) // 15),
             }
             _cache["ready"] = True
             _cache["taskId"] = task_id
@@ -112,7 +117,12 @@ class APIHandler(BaseHTTPRequestHandler):
         pass  # 静默日志
 
     def _cors(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        allowed_origins = ["http://localhost:8080", "http://127.0.0.1:8080", "http://localhost", "http://127.0.0.1"]
+        origin = self.headers.get("Origin", "")
+        if origin in allowed_origins:
+            self.send_header("Access-Control-Allow-Origin", origin)
+        else:
+            self.send_header("Access-Control-Allow-Origin", "http://localhost:8080")
         self.send_header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
 
@@ -220,6 +230,10 @@ class APIHandler(BaseHTTPRequestHandler):
         if path == "/" or path == "":
             path = "/index.html"
         static = os.path.join(HERE, path.lstrip("/"))
+        static = os.path.realpath(static)
+        if not static.startswith(os.path.realpath(HERE)):
+            self.send_error(403, "Access denied")
+            return
         if os.path.isfile(static):
             mime_map = {".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".png": "image/png"}
             ext = os.path.splitext(static)[1]
@@ -229,6 +243,10 @@ class APIHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         content_len = int(self.headers.get("Content-Length", 0))
+        max_content_length = 10 * 1024 * 1024  # 10MB
+        if content_len > max_content_length:
+            self.send_error(413, "Request entity too large")
+            return
         body = json.loads(self.rfile.read(content_len)) if content_len > 0 else {}
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
@@ -274,8 +292,9 @@ class APIHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    port = 2708
-    server = HTTPServer(("0.0.0.0", port), APIHandler)
+    port = int(os.environ.get("V7_PORT", "2708"))
+    bind_addr = os.environ.get("V7_BIND_ADDR", "127.0.0.1")  # 默认仅本地访问
+    server = HTTPServer((bind_addr, port), APIHandler)
     print(f"\n{'='*50}")
     print(f"  AI智能审图系统 v7.0 API服务器")
     print(f"  端口: {port}")

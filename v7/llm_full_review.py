@@ -11,7 +11,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+_self_dir = os.path.dirname(os.path.abspath(__file__))
+if _self_dir not in sys.path:
+    sys.path.insert(0, _self_dir)
 
 from rationality_engine import (
     annotate_all_rationality,
@@ -43,6 +45,19 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 PROJECT = "温州医科大学茶山东校区（阿尔伯塔学院新校区）"
 REPORT_DATE = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _read_file_safe(fpath: str) -> str:
+    """安全读取文件，自动尝试多种编码。"""
+    for encoding in ("utf-8", "gbk", "latin-1"):
+        try:
+            with open(fpath, "r", encoding=encoding) as f:
+                return f.read()
+        except UnicodeDecodeError:
+            continue
+    logger = logging.getLogger("v7.llm_full_review")
+    logger.warning(f"无法读取文件（尝试了所有编码）: {fpath}")
+    return ""
 
 
 # ================================================================
@@ -97,12 +112,7 @@ def load_discipline_texts() -> Dict[str, str]:
         if not fname.endswith("_text.txt"):
             continue
         fpath = os.path.join(TEXT_DIR, fname)
-        try:
-            with open(fpath, "r", encoding="utf-8") as f:
-                content = f.read()
-        except UnicodeDecodeError:
-            with open(fpath, "r", encoding="gbk") as f:
-                content = f.read()
+        content = _read_file_safe(fpath)
         
         if not content.strip():
             continue

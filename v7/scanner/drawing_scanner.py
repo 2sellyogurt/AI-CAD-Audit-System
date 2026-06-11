@@ -85,10 +85,13 @@ SCAN_PROMPT_TEMPLATE = """你是一位资深建筑审图专家，请快速扫描
 
 
 class DrawingScanner:
+    _MAX_CACHE_SIZE = 50
+    _MAX_TEXT_CHARS = 6000  # 最大文本截断长度
 
     def __init__(self, llm_factory=None):
         self._llm = llm_factory
         self._cache: Dict[str, ScanResult] = {}
+        self._cache_order: List[str] = []
 
     def _get_llm(self):
         if self._llm is None:
@@ -108,7 +111,7 @@ class DrawingScanner:
         result = ScanResult()
 
         try:
-            truncated = drawing_texts[:6000]
+            truncated = drawing_texts[:self._MAX_TEXT_CHARS]
             prompt = SCAN_PROMPT_TEMPLATE.format(drawing_text=truncated)
             logger.debug(f"Scanner prompt length: {len(prompt)}, truncated text: {len(truncated)}")
 
@@ -119,11 +122,13 @@ class DrawingScanner:
             data = None
             try:
                 from v7.llm.base_adapter import LLMBaseAdapter
-                extracted = LLMBaseAdapter._extract_json(raw)
+                extracted = LLMBaseAdapter.extract_json(raw)
                 if extracted:
                     data = json.loads(extracted)
-            except Exception:
-                pass
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON解析失败: {str(e)[:100]}")
+            except Exception as e:
+                logger.warning(f"提取JSON失败: {str(e)}")
 
             if data is None:
                 try:
@@ -146,12 +151,19 @@ class DrawingScanner:
                 result.notes = f"LLM返回非JSON，已用默认配置。原始响应: {raw[:300]}"
 
         except Exception as e:
-            result.risk_level = "medium"
+            result.risk_level = "high"
             result.relevant_disciplines = ["building", "fire"]
             result.notes = f"扫描失败: {str(e)[:200]}"
 
         result.scan_time_ms = (time.time() - start) * 1000
+        
+        if text_hash in self._cache:
+            self._cache_order.remove(text_hash)
+        elif len(self._cache) >= self._MAX_CACHE_SIZE:
+            oldest_key = self._cache_order.pop(0)
+            del self._cache[oldest_key]
         self._cache[text_hash] = result
+        self._cache_order.append(text_hash)
 
         logger.info(
             f"扫描完成: type={result.building_type}, risk={result.risk_level}, "

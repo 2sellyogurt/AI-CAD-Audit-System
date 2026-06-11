@@ -3,7 +3,7 @@
 v2.0: 楼层感知 + 标高解析 + Z轴推断
 """
 
-import os, sys, glob, re, json, hashlib, pickle, traceback, logging
+import os, sys, glob, re, json, hashlib, traceback, logging
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
@@ -23,7 +23,10 @@ try:
     _config_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.yaml")
     with open(_config_path, "r", encoding="utf-8") as _f:
         _config = yaml.safe_load(_f)
-except Exception:
+except FileNotFoundError:
+    _config = {}
+except Exception as e:
+    logging.getLogger("v7.spatial").warning(f"加载配置文件失败: {str(e)}")
     _config = {}
 
 
@@ -155,6 +158,7 @@ class SpatialIndex:
         self.floor_discipline_idx: Dict[Tuple[float, str], rtree_index.Index] = {}
         self._entity_map: Dict[int, SpatialEntity] = {}
         self._next_id = 0
+        self._entities_by_type: Dict[str, List[SpatialEntity]] = {}
 
     def build(self, entities: List[SpatialEntity]):
         for e in entities:
@@ -168,6 +172,10 @@ class SpatialIndex:
             if key not in self.floor_discipline_idx:
                 self.floor_discipline_idx[key] = rtree_index.Index()
             self.floor_discipline_idx[key].insert(eid, (e.x_min, e.y_min, e.x_max, e.y_max))
+            self._entities_by_type.setdefault(e.entity_type, []).append(e)
+
+    def get_entities_by_type(self, entity_type: str) -> List[SpatialEntity]:
+        return self._entities_by_type.get(entity_type, [])
 
     def query_cross_candidates(self, floor_id: float, source_disc: str,
                                 target_discs: List[str]) -> List[Tuple[SpatialEntity, SpatialEntity]]:
@@ -180,8 +188,8 @@ class SpatialIndex:
             if not tgt_idx:
                 continue
             for src_eid in src_idx.intersection(src_idx.bounds, objects=False):
-                src_bbox = src_idx.bounds  # fallback
-                hits = list(tgt_idx.intersection(src_idx.bounds, objects=False))
+                src_bbox = src_idx.bounds(src_eid)
+                hits = list(tgt_idx.intersection(src_bbox, objects=False))
                 for tgt_eid in hits[:500]:
                     se = self._entity_map.get(src_eid)
                     te = self._entity_map.get(tgt_eid)
@@ -254,7 +262,7 @@ class ConflictDeduplicator:
                 else:
                     idx = desc.find("区域")
                     region_text = desc[idx+2:].strip() if idx > 0 else desc
-                    h = hash(region_text) % 10000
+                    h = int(hashlib.md5(region_text.encode()).hexdigest(), 16) % 10000
                     pts.append([float(h), 0.0])
                 valid.append(g)
             if len(pts) < 2:
@@ -292,7 +300,9 @@ class SpatialAnalyzer:
         self.elevation_tags: List[ElevationTag] = []
         self.drawings: Dict[str, str] = {}
         self.spatial_index: Optional[SpatialIndex] = None
-        self._cache_dir = os.path.join(os.path.dirname(dxf_dir) if dxf_dir else ".", ".dxf_cache")
+        self._cache_dir = os.path.realpath(
+            os.path.join(os.path.dirname(dxf_dir) if dxf_dir else ".", ".dxf_cache")
+        )
         os.makedirs(self._cache_dir, exist_ok=True)
         logging.basicConfig(
             filename=os.path.join(self._cache_dir, "error.log"),
@@ -300,6 +310,11 @@ class SpatialAnalyzer:
             format="%(asctime)s [%(levelname)s] %(message)s"
         )
         self._logger = logging.getLogger("SpatialAnalyzer")
+
+    @property
+    def cache_dir(self) -> str:
+        """公开的缓存目录路径。"""
+        return self._cache_dir
 
     def _classify_entity(self, et: str, dxf_entity, discipline: str, name: str) -> Optional[SpatialEntity]:
         layer = dxf_entity.dxf.layer if hasattr(dxf_entity.dxf, 'layer') else ""
@@ -468,16 +483,16 @@ class SpatialAnalyzer:
             name = os.path.basename(dxf)
             file_mb = os.path.getsize(dxf) / 1e6
             if file_mb > 150:
-                print(f"  跳过(>150MB): {name[:50]} ({file_mb:.1f}MB)")
+                self._logger.info(f"跳过(>150MB): {name[:50]} ({file_mb:.1f}MB)")
                 continue
 
             fingerprint = hashlib.md5(f"{os.path.getmtime(dxf)}:{os.path.getsize(dxf)}:{dxf}".encode()).hexdigest()[:16]
-            cache_file = os.path.join(self._cache_dir, f"{fingerprint}.pkl")
+            cache_file = os.path.join(self._cache_dir, f"{fingerprint}.json")
             cached = False
             if os.path.exists(cache_file):
                 try:
-                    with open(cache_file, "rb") as cf:
-                        cache_data = pickle.load(cf)
+                    with open(cache_file, "r", encoding="utf-8") as cf:
+                        cache_data = json.load(cf)
                     for e_data in cache_data.get("entities", []):
                         self.entities.append(SpatialEntity(**e_data))
                     for fl_data in cache_data.get("floor_labels", []):
@@ -510,8 +525,8 @@ class SpatialAnalyzer:
                 }
                 os.makedirs(self._cache_dir, exist_ok=True)
                 try:
-                    with open(cache_file, "wb") as cf:
-                        pickle.dump(cache_data, cf, protocol=4)
+                    with open(cache_file, "w", encoding="utf-8") as cf:
+                        json.dump(cache_data, cf, ensure_ascii=False, indent=2)
                 except Exception as e:
                     self._logger.warning(f"缓存保存失败: {cache_file} err={e}")
         self._assign_floor_levels()
@@ -594,7 +609,7 @@ class SpatialAnalyzer:
                     e.z_top = e.z_bottom + 500
 
         if assigned > 0 or skipped_text > 0:
-            print(f"  楼层关联: {assigned}个实体已分配楼层, {no_floor}个未分配, {skipped_text}个text已跳过")
+            self._logger.info(f"楼层关联: {assigned}个实体已分配楼层, {no_floor}个未分配, {skipped_text}个text已跳过")
 
     def _same_floor(self, e1: SpatialEntity, e2: SpatialEntity) -> bool:
         if e1.floor_level is None or e2.floor_level is None:
@@ -632,8 +647,12 @@ class SpatialAnalyzer:
             if has_hvac and has_plumbing:
                 conflicts.extend(self._detect_pipe_crossing_rtree(si, fl_id))
 
-        walls = [e for e in self.entities if e.entity_type == "wall"]
-        columns = [e for e in self.entities if e.entity_type == "column"]
+        if si:
+            walls = si.get_entities_by_type("wall")
+            columns = si.get_entities_by_type("column")
+        else:
+            walls = [e for e in self.entities if e.entity_type == "wall"]
+            columns = [e for e in self.entities if e.entity_type == "column"]
         if walls:
             conflicts.extend(self._analyze_egress_width(walls, columns))
 
@@ -829,7 +848,7 @@ class SpatialAnalyzer:
                             "floor": b.floor_level
                         })
         if overlap_count > 0:
-            print(f"  梁-{entity_label}叠合: {overlap_count}个（已过滤跨楼层假冲突）")
+            self._logger.info(f"梁-{entity_label}叠合: {overlap_count}个（已过滤跨楼层假冲突）")
         return conflicts
 
     def _detect_duct_through_wall(self, ducts, walls) -> List[Dict]:
@@ -864,7 +883,7 @@ class SpatialAnalyzer:
                             "floor": w.floor_level
                         })
         if count > 0:
-            print(f"  风管穿墙: {count}个（已过滤跨楼层假冲突）")
+            self._logger.info(f"风管穿墙: {count}个（已过滤跨楼层假冲突）")
         return conflicts
 
     def _detect_column_pipe_conflict(self, columns, ducts_or_pipes) -> List[Dict]:
@@ -897,7 +916,7 @@ class SpatialAnalyzer:
                             "floor": col.floor_level
                         })
         if count > 0:
-            print(f"  柱-管线穿越: {count}个")
+            self._logger.info(f"柱-管线穿越: {count}个")
         return conflicts
 
     def _detect_pipe_crossing(self, ducts, pipes) -> List[Dict]:
@@ -1001,8 +1020,11 @@ class SpatialAnalyzer:
 
 
 if __name__ == "__main__":
-    dxf_dir = r"C:\Users\azyp\Desktop\医科大图纸DXF"
-    analyzer = SpatialAnalyzer(dxf_dir)
+    import argparse
+    parser = argparse.ArgumentParser(description="空间分析工具")
+    parser.add_argument("dxf_dir", nargs="?", default=".", help="DXF文件目录")
+    args = parser.parse_args()
+    analyzer = SpatialAnalyzer(args.dxf_dir)
     total = analyzer.extract_all()
 
     print(f"\n总实体: {total}")

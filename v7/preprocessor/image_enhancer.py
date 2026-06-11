@@ -18,7 +18,7 @@ logger = logging.getLogger("v7.image_enhancer")
 GAUSSIAN_KERNEL = 3
 CONTRAST_FACTOR = 1.3
 BRIGHTNESS_DELTA = 25
-SHARPEN_KERNEL = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]], dtype=np.float32)
+SHARPEN_KERNEL = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]], dtype=np.float32)
 
 
 def enhance_png(

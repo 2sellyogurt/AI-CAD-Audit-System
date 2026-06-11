@@ -24,6 +24,7 @@ class LLMConfig:
     base_url: str = ""
     api_key: str = ""
     timeout: int = 30
+    image_detail: str = "high"
     max_retries: int = 2
     retry_delay: List[float] = field(default_factory=lambda: [2.0, 5.0])
     temperature: float = 0.1
@@ -89,9 +90,12 @@ class LLMBaseAdapter(ABC):
 
             raw = self._extract_json(raw)
             return json.loads(raw) if raw else None
-        except (json.JSONDecodeError, Exception):
+        except json.JSONDecodeError:
             logger.warning("LLM返回非JSON格式，返回原始文本")
             return {"raw_text": raw if 'raw' in dir() else ""}
+        except Exception as e:
+            logger.error(f"LLM调用失败: {str(e)}")
+            return {"error": str(e)}
 
     def ask_with_retry(
         self,
@@ -143,6 +147,11 @@ class LLMBaseAdapter(ABC):
             return json.loads(raw) if raw else None
         except (json.JSONDecodeError, Exception):
             return {"raw_text": raw}
+
+    @staticmethod
+    def extract_json(text: str) -> str:
+        """从LLM输出中提取JSON部分。公开接口。"""
+        return LLMBaseAdapter._extract_json(text)
 
     @staticmethod
     def _extract_json(text: str) -> str:

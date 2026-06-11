@@ -32,6 +32,11 @@ CONTENT_DISCIPLINE_KEYWORDS: Dict[str, List[str]] = {
                    "乳胶漆", "瓷砖", "木饰面", "软包", "地毯", "石材"],
 }
 
+# 内容级匹配的阈值：需要匹配的关键字数量
+_CONTENT_MATCH_THRESHOLD = 2
+# 自由审查的最大文本长度
+_FREE_REVIEW_MAX_TEXT = 8000
+
 
 def _filter_with_content_fallback(
     drawing_infos: List[Any],
@@ -66,9 +71,9 @@ def _filter_with_content_fallback(
         # 检查 text_content 中是否含专业关键字
         text: str = getattr(d, "text_content", "") or getattr(d, "ocr_text", "") or ""
         if text:
-            score = sum(1 for kw in content_keywords if kw in text)
-            if score >= 2:
-                content_matched.append(d)
+                score = sum(1 for kw in content_keywords if kw in text)
+                if score >= _CONTENT_MATCH_THRESHOLD:
+                    content_matched.append(d)
 
     if content_matched:
         import logging
@@ -335,7 +340,7 @@ class FreeReviewAgent(BaseAgent):
                 f"请审查以下施工图纸的标注内容，找出所有你认为不符合规范、不合理、或值得关注的问题。\n"
                 f"对于每个问题，必须提供：问题描述、规范依据、整改建议。\n\n"
                 f"{symbol_ctx}"
-                f"【合并图纸文本内容】\n{merged_text[:8000]}\n\n"
+                f"【合并图纸文本内容】\n{merged_text[:_FREE_REVIEW_MAX_TEXT]}\n\n"
                 f'输出格式：{{"findings": [{{"description": "...", "standard": "...", "suggestion": "..."}}]}}'
             )
             raw, provider = llm_factory.call_with_failover(prompt, system="", mode="text")
@@ -344,12 +349,13 @@ class FreeReviewAgent(BaseAgent):
             findings = []
             try:
                 from v7.llm.base_adapter import LLMBaseAdapter
-                extracted = LLMBaseAdapter._extract_json(raw)
+                extracted = LLMBaseAdapter.extract_json(raw)
                 if extracted:
                     parsed = json.loads(extracted)
                     findings = parsed.get("findings", [])
-            except Exception:
-                pass
+            except Exception as e:
+                logger = logging.getLogger("v7.agents.discipline")
+                logger.warning(f"自由审查结果解析失败: {str(e)}")
 
             all_names = ", ".join(getattr(d, "readable_name", "") for d in drawings)
             for finding in findings:

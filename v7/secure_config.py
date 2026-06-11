@@ -25,7 +25,11 @@ def _get_master_key():
         return base64.urlsafe_b64encode(hashlib.sha256(env_key.encode()).digest())
 
     # 机器指纹方式
-    fingerprint = f"{os.environ.get('COMPUTERNAME','')}-{os.environ.get('USERNAME','')}"
+    hostname = os.environ.get('COMPUTERNAME') or os.environ.get('HOSTNAME')
+    username = os.environ.get('USERNAME') or os.environ.get('USER')
+    if not hostname or not username:
+        raise EnvironmentError("无法获取主机名或用户名环境变量，无法生成安全密钥。请设置COMPUTERNAME/HOSTNAME和USERNAME/USER环境变量。")
+    fingerprint = f"{hostname}-{username}"
     return base64.urlsafe_b64encode(hashlib.sha256(fingerprint.encode()).digest())
 
 
@@ -37,18 +41,32 @@ def _ensure_fernet():
 
 
 def _load_raw():
-    """加载原始配置文件"""
+    """加载原始配置文件（带缓存）"""
+    global _raw_cache, _raw_cache_mtime
     if os.path.exists(CONFIG_FILE):
+        mtime = os.path.getmtime(CONFIG_FILE)
+        if _raw_cache is not None and _raw_cache_mtime == mtime:
+            return _raw_cache
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
+            _raw_cache = json.load(f)
+            _raw_cache_mtime = mtime
+            return _raw_cache
     return {"provider": "", "mode": "proxy", "keys": {}}
 
 
 def _save_raw(data):
     """保存原始配置文件"""
+    global _raw_cache, _raw_cache_mtime
     with open(CONFIG_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
-    os.chmod(CONFIG_FILE, 0o600)  # 仅拥有者可读写
+    os.chmod(CONFIG_FILE, 0o600)
+    _raw_cache = data
+    _raw_cache_mtime = os.path.getmtime(CONFIG_FILE) if os.path.exists(CONFIG_FILE) else 0
+
+
+# 配置文件缓存
+_raw_cache = None
+_raw_cache_mtime = 0
 
 
 # ── 公开API ────────────────────────────────────────────
@@ -89,11 +107,8 @@ def get_api_key(provider=None):
         except Exception:
             return None
     else:
-        # 无cryptography库时的简单base64解码（不加密，仅编码）
-        try:
-            return base64.b64decode(encrypted).decode()
-        except Exception:
-            return None
+        logger.warning("未安装cryptography库，无法解密API密钥")
+        return None
 
 
 def set_api_key(provider, api_key, set_active=True):
@@ -110,8 +125,8 @@ def set_api_key(provider, api_key, set_active=True):
     if fernet:
         encrypted = fernet.encrypt(api_key.encode()).decode()
     else:
-        # 无cryptography时的简单编码（警告：非加密，仅编码）
-        encrypted = base64.b64encode(api_key.encode()).decode()
+        logger.error("未安装cryptography库，拒绝存储API密钥（明文存储不安全）")
+        raise EnvironmentError("需要安装cryptography库才能存储API密钥，请执行: pip install cryptography")
 
     data["keys"][provider] = encrypted
     if set_active:

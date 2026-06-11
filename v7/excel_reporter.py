@@ -4,6 +4,7 @@ import json, os
 from collections import Counter
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from openpyxl.utils import get_column_letter
 
 
 class ExcelReporter:
@@ -71,7 +72,7 @@ class ExcelReporter:
             cell.font = self.HEADER_FONT
             cell.alignment = Alignment(horizontal="center", vertical="center")
             cell.border = self.THIN_BORDER
-            ws.column_dimensions[chr(64 + i)].width = col_widths[i - 1]
+            ws.column_dimensions[get_column_letter(i)].width = col_widths[i - 1]
 
         sev_order = {"A": 0, "B": 1, "C": 2}
         sorted_conflicts = sorted(self.conflicts, key=lambda c: (sev_order.get(c.get("severity", "Z"), 99), c.get("type", "")))

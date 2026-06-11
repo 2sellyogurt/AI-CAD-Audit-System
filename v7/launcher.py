@@ -86,16 +86,18 @@ def main():
     os.environ["V7_PORT"] = str(port)
 
     try:
-        from v7.admin.server import AdminHandler, main as admin_main
+        from v7.admin.server import AdminHandler
         from http.server import HTTPServer
         logger = __import__('logging').getLogger("v7.launcher")
         logger.info(f"启动服务器 port={port}")
 
+        server = None
         server = HTTPServer(("0.0.0.0", port), AdminHandler)
         server.serve_forever()
     except KeyboardInterrupt:
         print("\n服务器已停止。")
-        server.server_close()
+        if server:
+            server.server_close()
     except Exception as e:
         print(f"\n[错误] 启动失败: {e}")
         import traceback

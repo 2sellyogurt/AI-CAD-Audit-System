@@ -170,6 +170,16 @@ class ProblemPool:
         self._issues_by_discipline: Dict[str, List[str]] = {}
         self._merge_distance: float = 10.0
 
+    @property
+    def issues(self):
+        """公开的问题字典。"""
+        return self._issues
+
+    @property
+    def issue_count(self) -> int:
+        """当前问题总数。"""
+        return len(self._issues)
+
     def add_from_checkpoint(
         self,
         checkpoint_result,
@@ -180,7 +190,7 @@ class ProblemPool:
         cr = checkpoint_result
         issue = UnifiedIssue(
             issue_id=self._generate_id(cr.checkpoint_id),
-            professional=cr.severity or "C",
+            discipline=cr.discipline or "",
             checkpoint_id=cr.checkpoint_id,
             checkpoint_name=cr.checkpoint_name,
             drawing_name=text_entity.file if text_entity else "",
@@ -225,10 +235,21 @@ class ProblemPool:
         )
 
         if text_entity:
-            issue.cad_coords = {"x": text_entity.x, "y": text_entity.y, "z": text_entity.z}
+            issue.cad_coords = {
+                "x": getattr(text_entity, "x", 0),
+                "y": getattr(text_entity, "y", 0),
+                "z": getattr(text_entity, "z", 0),
+            }
             issue.cad_script = self._generate_cad_script(issue)
 
         self._issues[issue.issue_id] = issue
+        
+        # 更新二级索引
+        if issue.drawing_name:
+            self._issues_by_drawing.setdefault(issue.drawing_name, []).append(issue.issue_id)
+        self._issues_by_checkpoint.setdefault(issue.checkpoint_id, []).append(issue.issue_id)
+        self._issues_by_discipline.setdefault(issue.discipline, []).append(issue.issue_id)
+        
         return issue.issue_id
 
     def add_issue(self, issue: UnifiedIssue) -> str:

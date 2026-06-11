@@ -10,20 +10,10 @@ import logging
 from typing import List, Optional, Tuple
 
 import ezdxf
-from ezdxf.math import BoundingBox2d
 
 logger = logging.getLogger("v7.frame_splitter")
 
-STANDARD_FRAMES = {
-    "A0": (1189, 841),
-    "A1": (841, 594),
-    "A2": (594, 420),
-    "A3": (420, 297),
-    "A4": (297, 210),
-    "A0+": (1189 * 1.25, 841 * 1.25),
-    "A1+": (841 * 1.25, 594 * 1.25),
-    "A2+": (594 * 1.25, 420 * 1.25),
-}
+from .constants import STANDARD_FRAMES
 
 
 def _rect_size(w: float, h: float) -> Tuple[float, float]:
@@ -87,7 +77,7 @@ def detect_frames(dxf_path: str, min_size_mm: float = 200) -> List[Tuple[str, fl
 
     blocks = set()
     for i, (name, x0, y0, x1, y1, area) in enumerate(candidates):
-        score = area - (name.startswith("A0") * 100000) + (i * 0.001)
+        score = area - (100000 if name == "A0" else 0) + (i * 0.001)
         blocks.add((name, x0, y0, x1, y1, score))
 
     unique = []
@@ -129,7 +119,7 @@ def split_drawing(dxf_path: str, output_dir: str) -> List[str]:
     for i, (name, x0, y0, x1, y1) in enumerate(frames):
         sub_png = os.path.join(output_dir, f"{base}_{name}_{i+1}.png")
         os.makedirs(output_dir, exist_ok=True)
-        if render_dxf_pil(dxf_path, sub_png):
+        if render_dxf_pil(dxf_path, sub_png, x_min=x0, y_min=y0, x_max=x1, y_max=y1):
             results.append(sub_png)
 
     if not results:

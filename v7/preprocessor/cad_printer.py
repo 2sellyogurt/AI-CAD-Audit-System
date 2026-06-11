@@ -11,26 +11,9 @@ import subprocess
 import logging
 import time
 from typing import List, Optional, Tuple
+from .cad_utils import find_autocad
 
 logger = logging.getLogger("v7.cad_print")
-
-AUTOCAD_PATHS = [
-    r"E:\Program Files\CAD2024\AutoCAD 2024\acad.exe",
-    r"C:\Program Files\Autodesk\AutoCAD 2024\acad.exe",
-    r"C:\Program Files\Autodesk\AutoCAD 2023\acad.exe",
-    r"C:\Program Files\Autodesk\AutoCAD 2022\acad.exe",
-    r"C:\Program Files\ZWSOFT\ZWCAD 2023\Zwcad.exe",
-    r"C:\Program Files\ZWSOFT\ZWCAD 2024\Zwcad.exe",
-]
-
-
-def find_autocad() -> Optional[str]:
-    """查找已安装的AutoCAD可执行文件路径"""
-    for path in AUTOCAD_PATHS:
-        if os.path.exists(path):
-            logger.info(f"找到CAD: {path}")
-            return path
-    return None
 
 
 def create_print_script(dxf_path: str, output_png: str, dpi: int = 300) -> str:
@@ -252,7 +235,7 @@ def print_drawing_ezdxf(dxf_path: str, output_png: str, dpi: int = 150) -> bool:
         timeout = 60 if file_mb < 30 else (90 if file_mb < 80 else 180)
         os.makedirs(os.path.dirname(output_png) or ".", exist_ok=True)
         result = subprocess.run(
-            ["python", "-m", "ezdxf", "draw", "-o", output_png, dxf_path],
+            [sys.executable, "-m", "ezdxf", "draw", "-o", output_png, dxf_path],
             capture_output=True, text=True, timeout=timeout
         )
         if os.path.exists(output_png) and os.path.getsize(output_png) > 0:

@@ -21,6 +21,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import ezdxf
 
+try:
+    import openpyxl
+    _HAS_OPENPYXL = True
+except ImportError:
+    _HAS_OPENPYXL = False
+
 logger = logging.getLogger("v7.title_block_extractor")
 
 ATTRIB_TAG_MAP = {
@@ -223,11 +229,14 @@ def _extract_from_block_definition(block) -> Dict[str, str]:
             field = TEXT_LABEL_FIELD_MAP[label_clean]
 
             best_val = None
-            best_dist = 50.0
+            best_dist = 200.0  # 放宽距离阈值，同时考虑X和Y
             for vx, vy, val_text in values:
+                dx = abs(vx - lx)
                 dy = abs(vy - ly)
-                if dy < best_dist:
-                    best_dist = dy
+                # 标签右侧的值优先，但允许左右摆动
+                dist = (dx * 0.3 + dy * 0.7)  # Y权重更高（同行优先）
+                if dist < best_dist:
+                    best_dist = dist
                     best_val = val_text
 
             if best_val:
@@ -448,9 +457,9 @@ class TitleBlockExtractor:
 
         rows = []
         for item in data:
-            frames = item.pop("frame_metadata", [])
+            frames = item.get("frame_metadata", [])
             base = {k: v for k, v in item.items()
-                    if not isinstance(v, (list, dict))}
+                    if not isinstance(v, (list, dict)) and k != "frame_metadata"}
             if frames:
                 for fm in frames:
                     row = dict(base)
@@ -477,20 +486,29 @@ class TitleBlockExtractor:
             "frame_bounds", "frame_drawing_no", "frame_drawing_name",
         ]
         columns = [c for c in columns if c in df.columns]
+        if not columns:
+            logger.warning(f"没有找到匹配的列，使用所有可用列")
+            columns = df.columns.tolist()
         df = df[columns]
 
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-        df.to_excel(output_path, index=False, engine="openpyxl")
-        logger.info(f"图签元数据导出Excel: {output_path} ({len(rows)}行)")
+        if _HAS_OPENPYXL:
+            df.to_excel(output_path, index=False, engine="openpyxl")
+            logger.info(f"图签元数据导出Excel: {output_path} ({len(rows)}行)")
+        else:
+            csv_path = output_path.replace(".xlsx", ".csv")
+            df.to_csv(csv_path, index=False, encoding="utf-8-sig")
+            logger.warning(f"openpyxl未安装，已导出为CSV: {csv_path}")
+            output_path = csv_path
         return output_path
 
     def _to_csv(self, data: List[Dict[str, Any]], output_path: str) -> str:
         import csv
         rows = []
         for item in data:
-            frames = item.pop("frame_metadata", [])
+            frames = item.get("frame_metadata", [])
             base = {k: v for k, v in item.items()
-                    if not isinstance(v, (list, dict))}
+                    if not isinstance(v, (list, dict)) and k != "frame_metadata"}
             if frames:
                 for fm in frames:
                     row = dict(base)

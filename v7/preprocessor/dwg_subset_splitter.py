@@ -102,10 +102,16 @@ def _entity_bbox(entity) -> Optional[Tuple[float, float, float, float]]:
             return (loc[0], loc[1], loc[0], loc[1])
         elif etype == "ELLIPSE":
             cx, cy = entity.dxf.center[0], entity.dxf.center[1]
-            rx = entity.dxf.major_axis[0] if hasattr(entity.dxf, "major_axis") else 100
-            ry = entity.dxf.minor_axis[0] if hasattr(entity.dxf, "minor_axis") else 100
-            rx = abs(rx) if rx else 100
-            ry = abs(ry) if ry else 100
+            if hasattr(entity.dxf, "major_axis") and entity.dxf.major_axis:
+                rx = abs(entity.dxf.major_axis[0])
+            else:
+                rx = 100
+            if hasattr(entity.dxf, "minor_axis") and entity.dxf.minor_axis:
+                ry = (entity.dxf.minor_axis[0]**2 + entity.dxf.minor_axis[1]**2)**0.5
+            else:
+                ry = 100
+            rx = rx if rx else 100
+            ry = ry if ry else 100
             return (cx - rx, cy - ry, cx + rx, cy + ry)
         elif etype == "SPLINE":
             try:
@@ -126,6 +132,13 @@ def _entity_bbox(entity) -> Optional[Tuple[float, float, float, float]]:
                 return (min(xs), min(ys), max(xs), max(ys))
             return None
         elif etype == "IMAGE":
+            if hasattr(entity, 'get_bbox'):
+                try:
+                    bbox = entity.get_bbox()
+                    if bbox is not None:
+                        return (bbox.extmin.x, bbox.extmin.y, bbox.extmax.x, bbox.extmax.y)
+                except Exception:
+                    pass
             ip = entity.dxf.insert
             sz = entity.dxf.u_pixel_size if hasattr(entity.dxf, "u_pixel_size") else 100
             return (ip[0], ip[1], ip[0] + sz, ip[1] + sz)
@@ -229,7 +242,8 @@ def _copy_block_defs(source_doc, target_doc, used_blocks: set):
                         src_etype = src_entity.dxftype()
                         if src_etype not in BLOCK_ENTITY_TYPES:
                             continue
-                        tgt_block.add_entity(copy.deepcopy(src_entity))
+                        tgt_entity = src_entity.copy()
+                        tgt_block.add_entity(tgt_entity)
                     except Exception:
                         continue
             except Exception:
@@ -295,7 +309,8 @@ def split_dxf_by_frames(dxf_path: str, frames: List[Tuple[str, float, float, flo
 
                 if _is_entity_in_frame(ebbox, frame_bounds, margin=margin):
                     try:
-                        target_msp.add_entity(copy.deepcopy(e))
+                        new_entity = e.copy()
+                        target_msp.add_entity(new_entity)
                         entity_count += 1
                         if etype == "INSERT":
                             used_blocks.add(e.dxf.name)

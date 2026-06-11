@@ -26,7 +26,7 @@ def run_spatial_pipeline():
     from v7.conflict_diff import diff as conflict_diff_run
     from v7.conflict_state_manager import ConflictStateManager
     from v7.preprocessor.drawing_extractor import DrawingExtractor
-    import glob, hashlib, pickle
+    import glob, hashlib
 
     print("=" * 70, flush=True)
     print(f"  [空间冲突] 全量DXF检测", flush=True)
@@ -38,7 +38,7 @@ def run_spatial_pipeline():
     dxf_paths = [f for f in dxf_paths if os.path.getsize(f) / 1e6 <= SKIP_MB]
 
     analyzer = SpatialAnalyzer(DXF_DIR)
-    cache_dir = analyzer._cache_dir
+    cache_dir = analyzer.cache_dir  # 使用公开属性
     ext = DrawingExtractor()
     HVAC_PREFIXES = {"h-", "h_", "nt-", "nt_", "暖通", "hvac", "air", "duct", "xr-a", "xr_"}
     STRUCT_PREFIXES = {"s-", "s_", "结施", "结构", "基础", "配筋", "桩基", "预制", "埋件", "g-", "g_"}
@@ -58,11 +58,11 @@ def run_spatial_pipeline():
     for idx, dxf_path in enumerate(dxf_paths, 1):
         name = os.path.basename(dxf_path)
         fingerprint = hashlib.md5(f"{os.path.getmtime(dxf_path)}:{os.path.getsize(dxf_path)}:{dxf_path}".encode()).hexdigest()[:16]
-        cache_file = os.path.join(cache_dir, f"{fingerprint}.pkl")
+        cache_file = os.path.join(cache_dir, f"{fingerprint}.json")
         if os.path.exists(cache_file):
             try:
-                with open(cache_file, "rb") as cf:
-                    cache_data = pickle.load(cf)
+                with open(cache_file, "r", encoding="utf-8") as cf:
+                    cache_data = json.load(cf)
                 for e_data in cache_data.get("entities", []):
                     analyzer.entities.append(SpatialEntity(**e_data))
                 for fl_data in cache_data.get("floor_labels", []):
@@ -90,8 +90,8 @@ def run_spatial_pipeline():
         }
         os.makedirs(cache_dir, exist_ok=True)
         try:
-            with open(cache_file, "wb") as cf:
-                pickle.dump(cache_data, cf, protocol=4)
+            with open(cache_file, "w", encoding="utf-8") as cf:
+                json.dump(cache_data, cf, ensure_ascii=False, indent=2)
         except Exception:
             pass
 
@@ -203,7 +203,7 @@ def run_dry_run_pipeline():
     import argparse
     args = argparse.Namespace(dxf_dir=DXF_DIR, output_dir=OUTPUT_DIR)
     pool = run_dry_run(args)
-    return {"modules_ok": len(pool._issues) > 0}
+    return {"modules_ok": pool.issue_count > 0}
 
 
 def main():

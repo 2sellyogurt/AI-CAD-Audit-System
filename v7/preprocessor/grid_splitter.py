@@ -26,22 +26,17 @@ GRID_PIXEL_MAP = [
 ]
 
 
-def _determine_grid_size(image_path: str) -> Tuple[int, int]:
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    if img is None:
-        return (8, 8)
-    h, w = img.shape[:2]
-    pixels = w * h
+def _determine_grid_size(pixels: int) -> Tuple[int, int]:
+    """根据图片像素数确定网格大小"""
     for limit, (rows, cols) in GRID_PIXEL_MAP:
         if pixels < limit:
             return (rows, cols)
     return (18, 18)
 
 
-def _compute_text_density_map(image_path: str, grid_rows: int, grid_cols: int) -> np.ndarray:
+def _compute_text_density_map(img: np.ndarray, grid_rows: int, grid_cols: int) -> np.ndarray:
     """生成文本密度热力图，标记每个网格的文字含量。"""
     try:
-        img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             return np.ones((grid_rows, grid_cols))
         h, w = img.shape
@@ -66,7 +61,7 @@ def split_to_grid(
     image_path: str,
     min_density: float = 0.005,
     output_dir: str = "",
-) -> List[str]:
+) -> Tuple[List[str], str]:
     """将图纸PNG切分为网格子图，跳过空白区域。
 
     Args:
@@ -75,20 +70,24 @@ def split_to_grid(
         output_dir: 输出目录，默认使用临时目录
 
     Returns:
-        非空白网格的临时PNG文件路径列表
+        Tuple[网格路径列表, 输出目录路径]，如果使用临时目录，调用者负责清理
     """
+    temp_dir = None
     if not output_dir:
-        output_dir = tempfile.mkdtemp(prefix="grid_")
+        temp_dir = tempfile.TemporaryDirectory(prefix="grid_")
+        output_dir = temp_dir.name
 
     img = cv2.imread(image_path)
     if img is None:
         logger.warning(f"无法读取图片: {image_path}")
-        return [image_path]
+        return [image_path], output_dir
 
     h, w = img.shape[:2]
     pixels = w * h
-    rows, cols = _determine_grid_size(image_path)
-    density_map = _compute_text_density_map(image_path, rows, cols)
+    rows, cols = _determine_grid_size(pixels)
+    
+    gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    density_map = _compute_text_density_map(gray_img, rows, cols)
 
     logger.debug(
         f"网格切分: {w}x{h}px ({pixels/1e6:.1f}MP) → {rows}x{cols}={rows*cols}格"
@@ -116,13 +115,14 @@ def split_to_grid(
             cv2.imwrite(tmp_path, cell, [cv2.IMWRITE_PNG_COMPRESSION, 3])
             grid_paths.append(tmp_path)
 
-        if (r * cols + c + 1) % 5 == 0:
+        if (r * cols + c + 1) % 50 == 0:
             gc.collect()
 
     logger.debug(
         f"网格切片完成: {len(grid_paths)}个有效网格, 跳过{skipped}个空白"
     )
-    return grid_paths if grid_paths else [image_path]
+    result = grid_paths if grid_paths else [image_path]
+    return result, output_dir
 
 
 def cleanup_grids(grid_paths: List[str]) -> None:

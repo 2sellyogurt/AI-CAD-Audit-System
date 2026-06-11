@@ -80,8 +80,8 @@ class ChiefAgent:
         if aid != bid:
             return False
 
-        ax = getattr(a, "cad_coords", {}) or {}
-        bx = getattr(b, "cad_coords", {}) or {}
+        ax = getattr(a, "cad_coords", {}) or getattr(a, "coords", {}) or {}
+        bx = getattr(b, "cad_coords", {}) or getattr(b, "coords", {}) or {}
         if ax and bx:
             dist = ((ax.get("x", 0) - bx.get("x", 0)) ** 2 +
                     (ax.get("y", 0) - bx.get("y", 0)) ** 2) ** 0.5
@@ -111,6 +111,7 @@ class ChiefAgent:
         re.compile(r'(未找到|不存在|缺失).*(标注|信息|说明)'),
     ]
 
+    # 严重度降级映射：当发现为文本缺失类问题时，降低严重度一级
     _SEVERITY_DOWNGRADE = {"A": "B", "B": "C", "C": "D", "D": "D"}
 
     @classmethod

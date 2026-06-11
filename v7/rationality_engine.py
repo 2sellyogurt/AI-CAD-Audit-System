@@ -75,7 +75,10 @@ def evaluate_evacuation(occupants, doors_width, building_type, use_type, max_dis
     """
     width_per_100 = EVACUATION_WIDTH_PER_100.get(building_type, 1.00)
     required = (occupants / 100.0) * width_per_100
-    margin = (doors_width - required) / required * 100.0 if required > 0 else 0
+    if required <= 0:
+        margin = None  # 人数为0时无法计算余量
+    else:
+        margin = (doors_width - required) / required * 100.0
 
     peak = PEAK_FACTOR.get(use_type, 1.0)
     dist_factor = max(0.2, min(1.0, (50.0 - max_distance) / 50.0))
@@ -272,8 +275,8 @@ def evaluate_structural_optimality(component_type, design_values):
         return make_rationality("R2", 60, f"构件类型'{component_type}'暂无最优区间基线, 无法评估最优性")
 
     scores = []
+    weights = []
     details = []
-    total_weight = 0
 
     # 评估配筋率
     if "reinforcement_ratio" in optimal and "reinforcement_ratio" in design_values:
@@ -283,21 +286,25 @@ def evaluate_structural_optimality(component_type, design_values):
         norm_max = optimal.get("norm_max_reinforcement", 1)
 
         if actual < norm_min:
-            scores.append((0.3, "配筋率低于规范最小值, R0"))
+            scores.append(0.3)
+            weights.append(0.5)
             details.append(f"配筋率{actual:.3f}<规范最小{norm_min:.3f}")
         elif actual > norm_max:
-            scores.append((0.5, "配筋率超出规范最大值, R0"))
+            scores.append(0.5)
+            weights.append(0.5)
             details.append(f"配筋率{actual:.3f}>规范最大{norm_max:.3f}")
         elif opt_min <= actual <= opt_max:
-            scores.append((1.0, "配筋率在最优区间"))
+            scores.append(1.0)
+            weights.append(0.5)
             details.append(f"配筋率{actual:.3f}∈[{opt_min:.3f}~{opt_max:.3f}]最优")
         elif norm_min <= actual < opt_min:
-            scores.append((0.7, "配筋率偏低但合规"))
+            scores.append(0.7)
+            weights.append(0.5)
             details.append(f"配筋率{actual:.3f}<最优下限{opt_min:.3f}, 偏经济但安全冗余偏低")
         else:  # opt_max < actual <= norm_max
-            scores.append((0.8, "配筋率偏高但合规"))
+            scores.append(0.8)
+            weights.append(0.5)
             details.append(f"配筋率{actual:.3f}>最优上限{opt_max:.3f}, 安全冗余大但经济性欠佳")
-        total_weight += 0.5
 
     # 评估高跨比/高厚比
     ratio_key = None
@@ -310,30 +317,36 @@ def evaluate_structural_optimality(component_type, design_values):
         actual_ratio = design_values[ratio_key]
         opt_min, opt_max = optimal[ratio_key]
         if opt_min <= actual_ratio <= opt_max:
-            scores.append((1.0, f"{ratio_key}在最优区间"))
+            scores.append(1.0)
+            weights.append(0.35)
             details.append(f"{ratio_key}={actual_ratio}∈[{opt_min}~{opt_max}]")
         else:
-            scores.append((0.6, f"{ratio_key}偏离最优区间"))
+            scores.append(0.6)
+            weights.append(0.35)
             details.append(f"{ratio_key}={actual_ratio}∉[{opt_min}~{opt_max}], 建议调整")
-        total_weight += 0.35
 
     # 评估应力比(钢结构)
     if "stress_ratio" in optimal and "stress_ratio" in design_values:
         actual = design_values["stress_ratio"]
         opt_min, opt_max = optimal["stress_ratio"]
         if opt_min <= actual <= opt_max:
-            scores.append((1.0, "应力比在最优区间"))
+            scores.append(1.0)
+            weights.append(0.15)
         elif actual < opt_min:
-            scores.append((0.7, "应力比偏低, 材料未充分利用"))
+            scores.append(0.7)
+            weights.append(0.15)
+            details.append("应力比偏低, 材料未充分利用")
         else:
-            scores.append((0.8, "应力比偏高, 安全冗余不足"))
-        total_weight += 0.15
+            scores.append(0.8)
+            weights.append(0.15)
+            details.append("应力比偏高, 安全冗余不足")
 
     if not scores:
         return make_rationality("R2", 60, f"缺少{component_type}评估所需的设计参数")
 
     # 加权计算
-    weighted = sum(s for s, _ in scores) / len(scores)
+    total_weight = sum(weights)
+    weighted = sum(s * w for s, w in zip(scores, weights)) / total_weight
     score = round(weighted * 100)
     level, _ = classify_rationality(score)
 
@@ -422,9 +435,10 @@ def evaluate_equipment_selection(equip_type, design_capacity, required_capacity,
 
 def annotate_all_rationality(findings):
     """
-    对审查发现批量追加rationality字段
-    根据问题类型自动调用对应的评估模型, 或使用默认评注
+    对审查发现批量追加rationality字段。
+    不修改原始列表，返回带rationality的新列表副本。
     """
+    findings = list(findings)  # 浅拷贝以避免副作用
     for f in findings:
         fid = f.get("id", "")
 

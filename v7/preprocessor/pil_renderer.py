@@ -17,8 +17,6 @@ from .cad_printer import _load_cjk_font
 logger = logging.getLogger("v7.pil_renderer")
 
 RENDER_DPI = 120
-PAGE_W_MM = 420
-PAGE_H_MM = 297
 
 
 def _compute_bounding_box(msp, blocks=None, margin: float = 0.05):
@@ -159,7 +157,7 @@ def _expand_inserts(entities, blocks, result, depth, max_depth,
 
 
 def render_dxf_pil(dxf_path: str, output_png: str, max_entities: int = 50000,
-                   existing_doc=None) -> bool:
+                   existing_doc=None, x_min=None, y_min=None, x_max=None, y_max=None) -> bool:
     try:
         file_mb = os.path.getsize(dxf_path) / (1024 * 1024)
         if file_mb > 80 and existing_doc is None:
@@ -177,12 +175,12 @@ def render_dxf_pil(dxf_path: str, output_png: str, max_entities: int = 50000,
         return False
 
     try:
-        bbox = _compute_bounding_box(msp, blocks=doc.blocks if hasattr(doc, 'blocks') else None)
-        if bbox is None:
-            logger.warning(f"包围盒计算失败(无可用几何实体): {os.path.basename(dxf_path)}")
-            return False
-
-        x_min, y_min, x_max, y_max = bbox
+        if x_min is None or y_min is None or x_max is None or y_max is None:
+            bbox = _compute_bounding_box(msp, blocks=doc.blocks if hasattr(doc, 'blocks') else None)
+            if bbox is None:
+                logger.warning(f"包围盒计算失败(无可用几何实体): {os.path.basename(dxf_path)}")
+                return False
+            x_min, y_min, x_max, y_max = bbox
         dw = x_max - x_min
         dh = y_max - y_min
         if dw <= 0 or dh <= 0:
@@ -256,8 +254,8 @@ def render_dxf_pil(dxf_path: str, output_png: str, max_entities: int = 50000,
                     r = e.dxf.radius * abs(sx) * scale
                     if r > 1:
                         a1, a2 = e.dxf.start_angle, e.dxf.end_angle
-                        a1_t = 360 - a1 if a1 > 180 else a1
-                        a2_t = 360 - a2 if a2 > 180 else a2
+                        a1_t = 360 - a1
+                        a2_t = 360 - a2
                         try:
                             draw.arc([(cx - r, cy - r), (cx + r, cy + r)],
                                      a1_t, a2_t, fill="black", width=1)
@@ -286,9 +284,9 @@ def render_dxf_pil(dxf_path: str, output_png: str, max_entities: int = 50000,
                     entity_count += 1
                 elif etype == "MTEXT":
                     x, y = _xfm(e.dxf.insert[0], e.dxf.insert[1])
-                    text = e.text
+                    text = e.plain_text() if hasattr(e, "plain_text") else e.text
                     if text and text.strip():
-                        clean = text.replace("\\P", "\n").replace("\\p", "\n")[:200]
+                        clean = text.replace("\\P", "\n")[:200]
                         for line_idx, line_text in enumerate(clean.split("\n")[:10]):
                             draw.text((x, y - 10 + line_idx * 16), line_text.strip()[:80],
                                       fill="blue", font=font)

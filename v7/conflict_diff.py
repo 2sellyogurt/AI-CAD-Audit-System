@@ -85,7 +85,8 @@ def diff(current_path, previous_path, output_path=None, state_manager=None):
     return cur
 
 
-def mark_waived(current_path, key_fragment, note=None):
+def _mark_status(current_path, key_fragment, status_method, action_label, note=None):
+    """通用状态标记逻辑。"""
     state_manager = ConflictStateManager()
     with open(current_path, "r", encoding="utf-8") as f:
         cur = json.load(f)
@@ -99,32 +100,23 @@ def mark_waived(current_path, key_fragment, note=None):
         print(f"未找到匹配 '{key_fragment}' 的冲突")
         return None
     key, conflict = matched
-    state_manager.mark_waived_by_key(key, reviewer="human", note=note)
-    print(f"已豁免: {key[:120]}")
+    status_method(key, reviewer="human", note=note)
+    print(f"{action_label}: {key[:120]}")
     state_summary = state_manager.summary()
     print(f"状态库统计: {state_summary['by_status']}")
     return key
+
+
+def mark_waived(current_path, key_fragment, note=None):
+    state_manager = ConflictStateManager()
+    return _mark_status(current_path, key_fragment,
+                        state_manager.mark_waived_by_key, "已豁免", note)
 
 
 def mark_resolved(current_path, key_fragment, note=None):
     state_manager = ConflictStateManager()
-    with open(current_path, "r", encoding="utf-8") as f:
-        cur = json.load(f)
-    matched = None
-    for c in cur:
-        k = make_key(c)
-        if key_fragment in k:
-            matched = (k, c)
-            break
-    if matched is None:
-        print(f"未找到匹配 '{key_fragment}' 的冲突")
-        return None
-    key, conflict = matched
-    state_manager.mark_resolved_by_key(key, reviewer="human", note=note)
-    print(f"已标记为已解决: {key[:120]}")
-    state_summary = state_manager.summary()
-    print(f"状态库统计: {state_summary['by_status']}")
-    return key
+    return _mark_status(current_path, key_fragment,
+                        state_manager.mark_resolved_by_key, "已标记为已解决", note)
 
 
 def show_status(current_path=None):

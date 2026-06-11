@@ -15,48 +15,9 @@ import logging
 import glob
 import time
 from typing import Dict, List, Optional, Tuple
+from .cad_utils import find_autocad, find_oda_converter, get_dwg_output_version
 
 logger = logging.getLogger("v7.dwg_converter")
-
-ODA_PATHS = [
-    r"C:\Program Files\ODA\ODAFileConverter 25.12.0\ODAFileConverter.exe",
-    r"C:\Program Files\ODA\ODAFileConverter\ODAFileConverter.exe",
-    r"C:\ODA\ODAFileConverter.exe",
-    os.path.expandvars(r"%ProgramFiles%\ODA\ODAFileConverter\ODAFileConverter.exe"),
-]
-
-AUTOCAD_PATHS = [
-    r"E:\Program Files\CAD2024\AutoCAD 2024\acad.exe",
-    r"C:\Program Files\Autodesk\AutoCAD 2024\acad.exe",
-    r"C:\Program Files\Autodesk\AutoCAD 2023\acad.exe",
-    r"C:\Program Files\Autodesk\AutoCAD 2022\acad.exe",
-    r"C:\Program Files\Autodesk\AutoCAD 2021\acad.exe",
-    r"C:\Program Files\ZWSOFT\ZWCAD 2024\Zwcad.exe",
-    r"C:\Program Files\ZWSOFT\ZWCAD 2023\Zwcad.exe",
-]
-
-
-def find_oda_converter() -> Optional[str]:
-    for p in ODA_PATHS:
-        if os.path.exists(p):
-            return p
-    try:
-        result = subprocess.run(
-            ["where", "ODAFileConverter.exe"],
-            capture_output=True, text=True, timeout=5
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return result.stdout.strip().split("\n")[0]
-    except Exception:
-        pass
-    return None
-
-
-def find_autocad() -> Optional[str]:
-    for p in AUTOCAD_PATHS:
-        if os.path.exists(p):
-            return p
-    return None
 
 
 def convert_dwg_to_dxf_oda(dwg_path: str, output_dir: str, timeout: int = 300) -> bool:
@@ -74,7 +35,7 @@ def convert_dwg_to_dxf_oda(dwg_path: str, output_dir: str, timeout: int = 300) -
             oda,
             input_dir,
             output_dir,
-            "ACAD2013", "DXF", "0", "1",
+            get_dwg_output_version(), "DXF", "0", "1",
             f"*.dwg",
         ]
         result = subprocess.run(

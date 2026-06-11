@@ -56,9 +56,11 @@ class ConflictStateManager:
             "updated_at": datetime.now().isoformat(timespec="seconds"),
             "states": self._states,
         }
+        tmp_file = self._state_file + ".tmp"
         with self._lock:
-            with open(self._state_file, "w", encoding="utf-8") as f:
+            with open(tmp_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_file, self._state_file)  # 原子替换（M-64: 消除TOCTOU竞态）
 
     def get_status(self, conflict):
         self._ensure_loaded()
@@ -173,8 +175,8 @@ class ConflictStateManager:
                     continue
             if key not in previous_keys:
                 self._states.setdefault(key, {})["status"] = STATUS_NEW
+        cur_keys = {make_key(c) for c in current_conflicts}
         for key in previous_keys:
-            cur_keys = {make_key(c) for c in current_conflicts}
             if key not in cur_keys:
                 if key in self._states:
                     entry_status = self._states[key].get("status")

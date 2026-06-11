@@ -109,7 +109,7 @@ class VisionAdapter(LLMBaseAdapter):
                     "type": "image_url",
                     "image_url": {
                         "url": f"data:{mime_type};base64,{img_b64}",
-                        "detail": "high"
+                        "detail": self.config.image_detail
                     }
                 })
             except Exception as e:
