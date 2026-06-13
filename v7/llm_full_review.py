@@ -43,7 +43,7 @@ TEXT_DIR = os.path.join(OUTPUT_DIR, "text_extracts")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-PROJECT = "温州医科大学茶山东校区（阿尔伯塔学院新校区）"
+PROJECT = os.environ.get("PROJECT_NAME", "")
 REPORT_DATE = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 

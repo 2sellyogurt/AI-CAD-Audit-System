@@ -208,8 +208,8 @@ checkpoints:
     severity: C
     priority: 55
     standard_code: GB50015-2019
-    standard_clause: "6.4.6"
-    clause_text: "热水供回水管、水加热器、贮热水罐等均应保温，保温层厚度应经计算确定，且不应小于20mm"
+    standard_clause: "6.8.5"
+    clause_text: "热水供水管和回水管均应保温，保温层厚度应经计算确定。保温材料应选用不燃或难燃材料"
     target_object: ["热水管", "保温层", "热水供水管"]
     target_property: "保温层厚度"
     operator: ">="

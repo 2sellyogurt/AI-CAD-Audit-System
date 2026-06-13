@@ -86,10 +86,18 @@ def main():
     os.environ["V7_PORT"] = str(port)
 
     try:
-        from v7.admin.server import AdminHandler
+        from v7.admin.server import AdminHandler, _restore_cache_from_db
         from http.server import HTTPServer
         logger = __import__('logging').getLogger("v7.launcher")
         logger.info(f"启动服务器 port={port}")
+
+        # 初始化数据库并恢复上次审查结果
+        try:
+            from v7.db import init_db
+            init_db()
+            _restore_cache_from_db()
+        except Exception as e:
+            logger.warning(f"数据库初始化/缓存恢复异常: {e}")
 
         server = None
         server = HTTPServer(("0.0.0.0", port), AdminHandler)

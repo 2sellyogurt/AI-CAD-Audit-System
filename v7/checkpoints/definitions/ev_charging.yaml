@@ -1,0 +1,178 @@
+discipline: ev_charging
+description: 充电桩专项检查点 - 8个高频检查项（配电/车位/防雷/消防）
+
+checkpoints:
+
+  # ============================================================================
+  # EV-001 ~ EV-008: 电动汽车充电桩专项8个高频检查项
+  # 引用标准: GB/T51313-2018 电动汽车分散充电设施工程技术标准
+  #           GB50966-2014  电动汽车充电站设计规范
+  #           GB50016-2014(2018) 建筑设计防火规范
+  #           GB50057-2010  建筑物防雷设计规范
+  # ============================================================================
+
+  # ---------------------------------------------------------------------------
+  # 1. 充电车位配建比例检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: EV-001
+    name: 充电车位配建比例检查
+    description: 检查新建建筑是否按规范要求预留了足够比例的充电停车位
+    discipline: ev_charging
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 100
+    standard_code: GB/T51313-2018
+    standard_clause: "3.0.2"
+    clause_text: "新建住宅配建停车位应100%建设充电设施或预留建设安装条件；新建大型公共建筑物配建停车场充电停车位配比不应低于总停车位的10%"
+    target_object: ["充电车位", "充电停车位", "EV车位"]
+    target_property: "充电车位数量"
+    operator: ">="
+    limit_value: 10
+    unit: "%"
+    keywords: ["充电车位", "充电停车位", "EV", "电动汽车", "配建比例"]
+    suggestion_template: "充电车位配建比例不足，请按GB/T51313-2018 3.0.2条按总车位10%（公共）或100%（住宅）配备"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 2. 充电桩配电系统检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: EV-002
+    name: 充电桩专用配电系统检查
+    description: 检查充电桩是否设置了独立的配电回路和变压器容量预留
+    discipline: ev_charging
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 98
+    standard_code: GB/T51313-2018
+    standard_clause: "4.1.1"
+    clause_text: "充电设施应设置专用配电回路，变压器容量应满足所有充电桩同时工作的需求"
+    target_object: ["充电桩配电", "变压器", "配电柜", "充电回路"]
+    target_property: "专用配电回路"
+    keywords: ["充电桩", "配电", "变压器", "回路", "负荷计算"]
+    suggestion_template: "充电桩未设置专用配电回路或变压器容量不足，请按GB/T51313-2018 4.1.1条补充配电设计"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 3. 充电桩防雷接地检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: EV-003
+    name: 充电桩防雷接地检查
+    description: 检查充电设施是否按要求设置了防雷接地和等电位联结
+    discipline: ev_charging
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 96
+    standard_code: GB50966-2014
+    standard_clause: "7.2.1"
+    clause_text: "充电站的防雷接地应符合GB50057的有关规定，充电设备应可靠接地，接地电阻不应大于4Ω"
+    target_object: ["充电桩", "防雷接地", "接地体"]
+    target_property: "防雷接地"
+    keywords: ["充电桩", "防雷", "接地", "电阻", "等电位"]
+    suggestion_template: "充电设施防雷接地设计不完整，请按GB50966-2014 7.2.1条补充接地设计"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 4. 充电区域防火措施检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: EV-004
+    name: 充电区域防火措施检查
+    description: 检查地下车库充电区域是否设置了防火隔断和自动灭火系统
+    discipline: ev_charging
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 97
+    standard_code: GB/T51313-2018
+    standard_clause: "6.1.5"
+    clause_text: "新建汽车库内配建的分散充电设施在同一防火分区内应集中布置，应设置独立的防火单元；地下、半地下和高层汽车库内配建分散充电设施时，应设置火灾自动报警系统、排烟设施、自动喷水灭火系统"
+    target_object: ["充电区域", "防火分区", "地下车库"]
+    target_property: "防火措施"
+    keywords: ["充电区域", "防火分区", "喷淋", "火灾报警", "地下车库"]
+    suggestion_template: "地下充电区域防火措施不足，请按GB/T51313-2018 7.2.1条划分防火分区并设置灭火系统"
+    applicable_building_types: ["地下建筑", "高层建筑", "公共建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 5. 充电设备选型与布置检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: EV-005
+    name: 充电设备选型与布置检查
+    description: 检查充电设备的选型、布置间距和保护措施是否符合规范要求
+    discipline: ev_charging
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 88
+    standard_code: GB/T51313-2018
+    standard_clause: "4.2.1"
+    clause_text: "充电设备的布置应满足操作和维护的安全距离要求，设备外壳防护等级不应低于IP54（户外）或IP32（户内）"
+    target_object: ["充电设备", "充电桩", "充电主机"]
+    target_property: "设备选型布置"
+    keywords: ["充电桩", "IP54", "防护等级", "安全距离", "布置"]
+    suggestion_template: "充电设备选型或布置不满足规范要求，请按GB/T51313-2018 4.2.1条调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 6. 充电桩供电电缆截面检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: EV-006
+    name: 充电桩供电电缆截面检查
+    description: 检查充电桩供电电缆的截面选择是否满足载流量和电压降要求
+    discipline: ev_charging
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 85
+    standard_code: GB50966-2014
+    standard_clause: "6.2.3"
+    clause_text: "充电设备供电电缆的载流量不应小于1.25倍额定电流，线路电压降不应大于5%"
+    target_object: ["充电电缆", "供电电缆", "配电线路"]
+    target_property: "电缆截面"
+    operator: ">="
+    limit_value: 10
+    unit: "mm²"
+    keywords: ["电缆", "截面", "充电桩", "供电", "载流量"]
+    suggestion_template: "充电桩供电电缆截面不足，请按GB50966-2014 6.2.3条根据额定电流和敷设距离重新选型"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 7. 充电车位划线及标识检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: EV-007
+    name: 充电车位划线及标识检查
+    description: 检查充电停车位是否设置了专用标识标线和防撞设施
+    discipline: ev_charging
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 60
+    standard_code: GB/T51313-2018
+    standard_clause: "5.1.2"
+    clause_text: "充电停车位应设置专用标识，并应采取防止车辆碰撞充电设备的措施"
+    target_object: ["充电车位标识", "车位标线", "防撞设施"]
+    target_property: "标识和防护"
+    keywords: ["充电车位", "标识", "标线", "防撞", "挡车"]
+    suggestion_template: "充电车位缺少专用标识或防撞设施，请按GB/T51313-2018 5.1.2条补充"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 8. 充电监控管理系统检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: EV-008
+    name: 充电监控管理系统检查
+    description: 检查大型充电设施是否配备了监控管理系统
+    discipline: ev_charging
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 82
+    standard_code: GB50966-2014
+    standard_clause: "8.1.1"
+    clause_text: "充电站应设置监控管理系统，实现对充电设备运行状态、充电电量、安全状态的实时监控"
+    target_object: ["监控系统", "管理系统", "充电管理平台"]
+    target_property: "监控管理系统"
+    keywords: ["监控", "管理系统", "充电平台", "运营管理"]
+    suggestion_template: "充电设施未配备监控管理系统，请按GB50966-2014 8.1.1条增设充电监控系统"
+    applicable_building_types: ["公共建筑", "交通建筑"]

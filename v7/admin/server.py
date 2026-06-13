@@ -4,7 +4,7 @@
 启动: python -m v7.admin.server [--port 2708]
 """
 
-import json, os, sys, time, threading, uuid, hashlib, secrets, logging, traceback
+import json, os, sys, time, threading, uuid, hashlib, secrets, logging, logging.handlers, traceback
 from datetime import datetime
 from urllib.parse import urlparse, parse_qs
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -15,12 +15,18 @@ ROOT = os.path.dirname(PARENT)
 
 PASSWORD_FILE = os.path.join(PARENT, ".admin_password")
 OUTPUT_DIR = os.path.join(ROOT, "output_v7.0")
+PORT = int(os.environ.get("V7_PORT", 2708))
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
-        logging.FileHandler(os.path.join(OUTPUT_DIR, "admin.log"), encoding="utf-8"),
+        logging.handlers.RotatingFileHandler(
+            os.path.join(OUTPUT_DIR, "admin.log"),
+            maxBytes=10 * 1024 * 1024,  # 10MB
+            backupCount=5,
+            encoding="utf-8",
+        ),
         logging.StreamHandler()
     ]
 )
@@ -29,6 +35,107 @@ logger = logging.getLogger("v7.admin")
 # 共享的审查缓存（与旧 server.py 共用数据源）
 _review_cache = {"issues": [], "stats": {}, "conflicts": [], "ready": False, "taskId": None}
 _cache_lock = threading.Lock()
+
+
+def _restore_cache_from_db():
+    """启动时从 SQLite 恢复最近一次审查结果到内存缓存。"""
+    try:
+        from v7.db import get_db
+        db = get_db()
+        row = db.execute(
+            "SELECT id, total_issues, severity_a, severity_b, severity_c, severity_d, "
+            "total_conflicts, elapsed_ms, result_json, status, started_at, finished_at "
+            "FROM reviews ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        if not row or row["status"] not in ("completed", "done"):
+            return
+        review_id = row["id"]
+        issues_rows = db.execute(
+            "SELECT * FROM review_issues WHERE review_id = ? ORDER BY id", (review_id,)
+        ).fetchall()
+        all_issues = [dict(r) for r in issues_rows]
+        by_sev = {"A": row["severity_a"], "B": row["severity_b"],
+                  "C": row["severity_c"], "D": row["severity_d"]}
+        with _cache_lock:
+            _review_cache.update(
+                issues=all_issues, conflicts=[], ready=True,
+                taskId=f"r{review_id}",
+                stats={
+                    "totalIssues": row["total_issues"],
+                    "totalConflicts": row["total_conflicts"],
+                    "bySeverity": by_sev,
+                    "highConfConflicts": 0,
+                    "reviewTimeMin": max(1, row["total_issues"] // 20) if row["total_issues"] else 0,
+                    "pipeline": "v7",
+                },
+            )
+        logger.info(f"从数据库恢复审查结果: review_id={review_id}, {len(all_issues)}项问题")
+    except Exception as e:
+        logger.warning(f"恢复审查缓存失败: {e}")
+
+
+def _persist_review_to_db(task_id, all_issues, stats, elapsed_ms=0):
+    """将审查结果持久化到 SQLite 的 reviews + review_issues 表。"""
+    try:
+        from v7.db import get_db
+        db = get_db()
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # 确保有默认项目
+        project_row = db.execute("SELECT id FROM projects LIMIT 1").fetchone()
+        if not project_row:
+            db.execute("INSERT INTO projects(name, dxf_dir, output_dir) VALUES (?, ?, ?)",
+                       ("默认项目", "", ""))
+            db.commit()
+            project_row = db.execute("SELECT id FROM projects LIMIT 1").fetchone()
+        project_id = project_row["id"]
+
+        by_sev = stats.get("bySeverity", {})
+        import json as _json
+        db.execute(
+            """INSERT INTO reviews (project_id, mode, status, total_issues,
+               severity_a, severity_b, severity_c, severity_d,
+               total_conflicts, elapsed_ms, started_at, finished_at, result_json)
+               VALUES (?, 'cached', 'completed', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (project_id, stats.get("totalIssues", 0),
+             by_sev.get("A", 0), by_sev.get("B", 0),
+             by_sev.get("C", 0), by_sev.get("D", 0),
+             stats.get("totalConflicts", 0), elapsed_ms,
+             now_str, now_str,
+             _json.dumps({"taskId": task_id, "pipeline": "v7"}, ensure_ascii=False)),
+        )
+        review_id = db.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        # 写入问题明细
+        for issue in all_issues:
+            db.execute(
+                """INSERT INTO review_issues
+                   (review_id, issue_id, checkpoint_id, discipline, severity,
+                    standard_code, finding, fix, drawing_name, location,
+                    confidence, route_used, rationality, rationality_score)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (review_id,
+                 issue.get("id", issue.get("issue_id", "")),
+                 issue.get("checkpoint_id", ""),
+                 issue.get("discipline", ""),
+                 issue.get("severity", "C"),
+                 issue.get("standard_code", ""),
+                 issue.get("finding", issue.get("suggestion", "")),
+                 issue.get("fix", ""),
+                 issue.get("drawing_name", ""),
+                 issue.get("location", ""),
+                 issue.get("confidence", "high"),
+                 issue.get("route_used", "text"),
+                 issue.get("rationality", "R2"),
+                 issue.get("rationality_score", 60)),
+            )
+        db.commit()
+        logger.info(f"审查结果已持久化: review_id={review_id}, {len(all_issues)}项问题")
+        return review_id
+    except Exception as e:
+        logger.error(f"持久化审查结果失败: {e}")
+        logger.error(traceback.format_exc())
+        return None
 
 # ── 密码 ──
 
@@ -153,47 +260,91 @@ _PAGE_MODULES_CACHE = {}
 # ── 后台审查管线 ──
 
 def _run_review():
+    """后台审查线程 — 使用 v7 Agent集群管线 (CheckpointEngine + AgentOrchestrator)"""
     task_id = uuid.uuid4().hex[:8]
+    start_time = time.time()
     with _cache_lock:
         _review_cache["taskId"] = task_id
         _review_cache["ready"] = False
     try:
-        from v7.llm_full_review import (
-            detect_best_mode, review_all_real_llm,
-            cross_discipline_analysis, load_spatial, DISCIPLINE_REVIEWER_MAP,
-        )
+        from v7.checkpoints import CheckpointEngine
+        from v7.scheduler import AgentOrchestrator
+        from v7.problem_pool import ProblemPool
+        from v7.preprocessor import DrawingExtractor
+        from v7.scanner import DrawingScanner
         from v7.rationality_engine import annotate_all_rationality
-        mode = detect_best_mode()
-        if mode.value == "real":
-            logger.info("实时LLM审查...")
-            all_findings, _ = review_all_real_llm()
+
+        # 1. 加载检查点
+        engine = CheckpointEngine()
+        logger.info(f"加载 {engine.total_count} 个检查点")
+
+        # 2. 扫描图纸
+        extractor = DrawingExtractor()
+        dxf_files = extractor.find_dxf_files()
+        drawings = [extractor.process_drawing(f) for f in dxf_files[:20]]  # 限制20份
+        merged_text = "\n".join(d.text_content for d in drawings if d.text_content)
+        logger.info(f"扫描 {len(drawings)} 份图纸")
+
+        # 3. 创建Agent集群
+        orch = AgentOrchestrator()
+        orch.create_all_agents()
+        logger.info(f"创建 {len(orch.agents)} 个Agent")
+
+        # 4. 执行审查
+        pool = ProblemPool()
+        scanner = DrawingScanner()
+        if merged_text:
+            scan = scanner.scan(merged_text)
+            active = scan.relevant_disciplines if scan and scan.relevant_disciplines else list(orch.agents.keys())
         else:
-            logger.info("缓存审查...")
-            all_findings = []
-            for disc, reviewer in DISCIPLINE_REVIEWER_MAP.items():
-                for i in reviewer():
-                    i["discipline"] = disc
-                    all_findings.append(i)
-        cross = cross_discipline_analysis()
-        all_with_cross = all_findings + cross
-        all_with_cross = annotate_all_rationality(all_with_cross)
-        spatial_raw = load_spatial()
-        conflicts = [{"type": c.get("type",""),"severity": c.get("severity","D"),
-                      "confidence": c.get("confidence","low"),"floor": c.get("floor",0),
-                      "description": c.get("description","")[:200]} for c in spatial_raw]
-        by_sev = {"A":0,"B":0,"C":0,"D":0}
-        for f in all_with_cross:
-            by_sev[f["severity"]] = by_sev.get(f["severity"],0)+1
+            active = list(orch.agents.keys())
+
+        for aid in active:
+            agent = orch.agents.get(aid)
+            if not agent:
+                continue
+            try:
+                agent_report = agent.execute(drawings, problem_pool=pool)
+                logger.info(f"  [{aid}] {agent_report.issues_found} issues found")
+            except Exception as e:
+                logger.warning(f"  [{aid}] 执行异常: {e}")
+
+        # 5. 汇总结果
+        all_issues = pool.to_list()
+        all_issues = annotate_all_rationality(all_issues)
+        by_sev = {"A": 0, "B": 0, "C": 0, "D": 0}
+        for f in all_issues:
+            sev = f.get("severity", "C")
+            by_sev[sev] = by_sev.get(sev, 0) + 1
+
         with _cache_lock:
-            _review_cache.update(issues=all_with_cross, conflicts=conflicts, ready=True,
-                taskId=task_id, stats={"totalIssues":len(all_with_cross),
-                    "totalConflicts":len(conflicts),"bySeverity":by_sev,
-                    "highConfConflicts":sum(1 for c in conflicts if c["confidence"]=="high"),
-                    "reviewTimeMin":10})
-        logger.info(f"审查完成: {len(all_with_cross)}项")
+            _review_cache.update(
+                issues=all_issues, conflicts=[], ready=True,
+                taskId=task_id,
+                stats={
+                    "totalIssues": len(all_issues),
+                    "totalConflicts": 0,
+                    "bySeverity": by_sev,
+                    "highConfConflicts": 0,
+                    "reviewTimeMin": max(1, len(all_issues) // 20),
+                    "pipeline": "v7",
+                },
+            )
+        logger.info(f"v7审查完成: {len(all_issues)}项")
+
+        # 持久化审查结果到 SQLite
+        elapsed_ms = int((time.time() - start_time) * 1000)
+        _persist_review_to_db(task_id, all_issues, _review_cache["stats"], elapsed_ms)
+
     except Exception as e:
         logger.error(f"审查异常: {e}")
         logger.error(traceback.format_exc())
+        with _cache_lock:
+            _review_cache["ready"] = True
+            _review_cache["issues"] = []
+            _review_cache["conflicts"] = []
+            _review_cache["stats"] = {"totalIssues": 0, "totalConflicts": 0,
+                                       "bySeverity": {}, "reviewTimeMin": 0, "pipeline": "v7"}
 
 
 # ── 请求处理器 ──
@@ -272,18 +423,39 @@ class AdminHandler(BaseHTTPRequestHandler):
 
         # ── 无需认证 ──
         if path == "/admin/login":
-            return self._html(200, _page("登录", """<div class="card" style="max-width:400px;margin:60px auto" role="form" aria-label="管理员登录">
+            # 检测是否有API Key配置
+            has_api_key = False
+            try:
+                from v7.db import get_db
+                db = get_db()
+                row = db.execute("SELECT provider FROM api_keys WHERE api_key != '' LIMIT 1").fetchone()
+                has_api_key = row is not None
+            except Exception:
+                pass
+
+            api_hint = ""
+            if not has_api_key:
+                api_hint = """
+                <div class="alert" style="background:#fff3cd;border:1px solid #ffc107;border-radius:6px;padding:12px;margin-bottom:16px">
+                  <strong>提示：</strong>尚未配置 LLM API 密钥，审查功能将无法使用。<br>
+                  <span style="font-size:12px;color:#666">登录后请前往 <a href="/admin/api-config" style="color:#16213e">🔑 API 配置</a> 页面添加密钥（推荐智谱/DeepSeek）。</span>
+                </div>"""
+
+            return self._html(200, _page("登录", f"""<div class="card" style="max-width:400px;margin:60px auto" role="form" aria-label="管理员登录">
+{api_hint}
 <h3>🔐 管理后台</h3><div class="form-group"><label for="admin-password">密码</label>
 <input type="password" id="admin-password" placeholder="输入管理密码" autofocus aria-required="true"></div>
 <button class="btn btn-primary" onclick="login()" aria-label="登录管理后台">登录</button>
 <p id="msg" style="margin-top:10px" class="text-sev-a" role="alert"></p></div>""",
-"""async function login(){const r=await fetch('/admin/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:document.getElementById('admin-password').value})});const d=await r.json();if(d.ok)location.href='/admin/dashboard';else document.getElementById('msg').innerHTML='⚠ '+d.error}"""))
+"""async function login(){const r=await fetch('/admin/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:document.getElementById('admin-password').value})});const d=await r.json();if(d.ok){if(d.firstLogin){document.getElementById('msg').innerHTML='⚠ 首次登录成功，请前往 ⚙️系统维护 设置管理密码';setTimeout(function(){location.href='/admin/dashboard';},2000);}else{location.href='/admin/dashboard';}}else{document.getElementById('msg').innerHTML='⚠ '+d.error;}}"""))
 
-        # ── 公共 API ──
+        # ── 公共 API（无需认证） ──
         if path == "/admin/api/login":
             return self.do_POST()
         if path == "/admin/api/set-password":
             return self.do_POST()
+        if path == "/api/health":
+            return self._json(200, {"status": "ok", "version": "7.0", "port": PORT})
 
         # ── 需要认证 ──
         if not self._check_auth():
@@ -358,12 +530,18 @@ class AdminHandler(BaseHTTPRequestHandler):
 
         if path == "/admin/api/login":
             pw = body.get("password", "")
+            # 首次无密码时：任意密码可登录，并提示设置密码
+            is_first_login = not os.path.exists(PASSWORD_FILE)
             if _verify(pw):
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json; charset=utf-8")
                 self._cookie("v7_admin_token", _session_token())
                 self.end_headers()
-                self.wfile.write(json.dumps({"ok":True}).encode())
+                resp = {"ok": True}
+                if is_first_login:
+                    resp["firstLogin"] = True
+                    resp["hint"] = "首次登录成功，建议立即设置管理密码"
+                self.wfile.write(json.dumps(resp, ensure_ascii=False).encode())
             else:
                 self._json(401, {"ok":False,"error":"密码错误"})
             return
@@ -447,12 +625,19 @@ class AdminHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    port = int(os.environ.get("V7_PORT", 2708))
-    server = HTTPServer(("0.0.0.0", port), AdminHandler)
+    # 初始化数据库并恢复上次审查结果
+    try:
+        from v7.db import init_db
+        init_db()
+        _restore_cache_from_db()
+    except Exception as e:
+        logger.warning(f"数据库初始化/缓存恢复异常: {e}")
+
+    server = HTTPServer(("0.0.0.0", PORT), AdminHandler)
     print(f"\n{'='*50}")
     print(f"  AI智能审图系统 v7.0 — 管理后台")
-    print(f"  地址: http://localhost:{port}/admin/dashboard")
-    print(f"  API:  http://localhost:{port}/admin/api/stats")
+    print(f"  地址: http://localhost:{PORT}/admin/dashboard")
+    print(f"  API:  http://localhost:{PORT}/admin/api/stats")
     print(f"{'='*50}\n")
     try:
         server.serve_forever()

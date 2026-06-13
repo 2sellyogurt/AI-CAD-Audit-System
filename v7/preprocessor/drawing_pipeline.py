@@ -40,9 +40,9 @@ logger = logging.getLogger("v7.drawing_pipeline")
 
 def setup_args():
     p = argparse.ArgumentParser(description="图纸智能拆分与标注管线")
-    p.add_argument("--dwg-dir", default=r"C:\Users\azyp\Desktop\图纸（医科大学）",
-                   help="DWG源文件目录")
-    p.add_argument("--dxf-dir", default=r"C:\Users\azyp\Desktop\医科大图纸DXF",
+    p.add_argument("--dwg-dir", default=None,
+                   help="DWG源文件目录（必填）")
+    p.add_argument("--dxf-dir", default=None,
                    help="DXF文件目录（如已有DXF可跳过转换）")
     p.add_argument("--output", default="", help="输出目录（默认: output_v7.0/split_annotated/）")
     p.add_argument("--scan-only", action="store_true", help="仅扫描统计，不拆分")
@@ -361,6 +361,17 @@ def main():
     project_output = os.path.join(_parent, "output_v7.0")
     output_dir = args.output or os.path.join(project_output, "split_annotated")
     os.makedirs(output_dir, exist_ok=True)
+
+    # 校验：未提供路径时给出明确提示
+    missing = []
+    if not args.no_convert and args.convert_method != "none" and not args.dwg_dir:
+        missing.append("--dwg-dir（DWG源文件目录）")
+    if not args.dxf_dir:
+        missing.append("--dxf-dir（DXF文件目录）")
+    if missing:
+        print(f"错误：缺少必填参数 {', '.join(missing)}")
+        print("用法: python drawing_pipeline.py --dwg-dir <路径> --dxf-dir <路径>")
+        sys.exit(1)
 
     t_start = time.time()
 

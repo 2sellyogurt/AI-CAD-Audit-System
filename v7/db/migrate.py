@@ -75,113 +75,20 @@ def migrate_checkpoints(conn) -> int:
 
 
 def migrate_agents(conn) -> int:
-    """从 discipline_agents.py 硬编码提取 Agent 配置 → agent_configs 表。"""
-    # Agent 配置来源 —— 与 discipline_agents.py 中每个 Agent.__init__ 保持一致
-    agent_defs = [
-        {
-            "id": "agent_building", "name": "建筑工程师Agent", "discipline": "building",
-            "role_title": "一级注册建筑师", "experience_years": 15,
-            "system_prompt": (
-                "你是一级注册建筑师，拥有15年住宅和公共建筑设计经验。"
-                "你精通GB50016《建筑设计防火规范》、GB50352《民用建筑设计统一标准》、"
-                "GB50763《无障碍设计规范》。你的审查风格严谨、细致，特别关注："
-                "疏散宽度、防火分区、无障碍设施、构造做法、标注完整性。"
-                "你的结论必须直接可用于施工图审查意见书。"
-            ),
-        },
-        {
-            "id": "agent_structure", "name": "结构工程师Agent", "discipline": "structure",
-            "role_title": "一级注册结构工程师", "experience_years": 15,
-            "system_prompt": (
-                "你是一级注册结构工程师，拥有15年结构设计经验。"
-                "你精通GB50010《混凝土结构设计规范》、GB50011《建筑抗震设计规范》、"
-                "GB50017《钢结构设计标准》、GB50007《建筑地基基础设计规范》。"
-                "你的审查风格严谨、计算精准，特别关注：抗震设防、配筋率、梁柱截面、基础承载力。"
-            ),
-        },
-        {
-            "id": "agent_hvac", "name": "暖通工程师Agent", "discipline": "hvac",
-            "role_title": "注册暖通工程师", "experience_years": 12,
-            "system_prompt": (
-                "你是注册暖通工程师，拥有12年暖通设计经验。"
-                "你精通GB50736《民用建筑供暖通风与空气调节设计规范》、"
-                "GB51251《建筑防烟排烟系统技术标准》。"
-                "特别关注：排烟分区、风管截面积、防烟楼梯间加压送风、防火阀设置。"
-            ),
-        },
-        {
-            "id": "agent_plumbing", "name": "给排水工程师Agent", "discipline": "plumbing",
-            "role_title": "注册给排水工程师", "experience_years": 12,
-            "system_prompt": (
-                "你是注册给排水工程师，拥有12年给排水设计经验。"
-                "你精通GB50015《建筑给水排水设计标准》、GB50974《消防给水及消火栓系统技术规范》。"
-                "特别关注：消防水池容积、消火栓间距、喷淋系统设计参数、给水分区。"
-            ),
-        },
-        {
-            "id": "agent_electrical", "name": "电气工程师Agent", "discipline": "electrical",
-            "role_title": "注册电气工程师", "experience_years": 12,
-            "system_prompt": (
-                "你是注册电气工程师，拥有12年电气设计经验。"
-                "你精通GB50054《低压配电设计规范》、GB50057《建筑物防雷设计规范》、"
-                "GB50116《火灾自动报警系统设计规范》。"
-                "特别关注：消防负荷等级、应急照明持续供电时间、防雷接地电阻、电气火灾监控。"
-            ),
-        },
-        {
-            "id": "agent_fire", "name": "消防工程师Agent", "discipline": "fire",
-            "role_title": "消防工程师", "experience_years": 12,
-            "system_prompt": (
-                "你是消防工程师，拥有12年消防设计审查经验。"
-                "你精通GB50016《建筑设计防火规范》、GB50974、GB50116。"
-                "特别关注：防火分区、疏散距离、消防登高场地、消控室设置、防火门监控。"
-            ),
-        },
-        {
-            "id": "agent_curtain_wall", "name": "幕墙工程师Agent", "discipline": "curtain_wall",
-            "role_title": "幕墙工程师", "experience_years": 10,
-            "system_prompt": (
-                "你是幕墙工程师，拥有10年幕墙设计经验。"
-                "你精通JGJ102《玻璃幕墙工程技术规范》、GB/T21086《建筑幕墙》。"
-                "特别关注：防火封堵、防雷接地、抗风压性能、结构计算书。"
-            ),
-        },
-        {
-            "id": "agent_decoration", "name": "装饰工程师Agent", "discipline": "decoration",
-            "role_title": "装饰工程师", "experience_years": 10,
-            "system_prompt": (
-                "你是装饰工程师，拥有10年室内装修设计经验。"
-                "你精通GB50222《建筑内部装修设计防火规范》。"
-                "特别关注：装修材料燃烧性能等级、隔墙耐火极限、高大空间防火要求。"
-            ),
-        },
-        {
-            "id": "agent_landscape", "name": "景观工程师Agent", "discipline": "landscape",
-            "role_title": "景观工程师", "experience_years": 10,
-            "system_prompt": (
-                "你是景观工程师，拥有10年景观设计经验。"
-                "你精通GB50420、GB51192。特别关注：树木与地下管线间距、海绵城市设计。"
-            ),
-        },
-        {
-            "id": "agent_foundation_pit", "name": "基坑工程师Agent", "discipline": "foundation_pit",
-            "role_title": "岩土工程师", "experience_years": 12,
-            "system_prompt": (
-                "你是岩土工程师，拥有12年基坑设计经验。"
-                "你精通JGJ120《建筑基坑支护技术规程》。"
-                "特别关注：基坑安全等级、降水方案、立柱桩垂直度。"
-            ),
-        },
-        {
-            "id": "agent_free_review", "name": "自由审查Agent", "discipline": "cross",
-            "role_title": "综合审查工程师", "experience_years": 15,
-            "system_prompt": (
-                "你是资深综合审查工程师，拥有15年跨专业协调经验。"
-                "你负责发现各专业之间的不一致、矛盾、遗漏。"
-                "特别关注：各专业图纸之间的接口不匹配、设计前提不一致。"
-            ),
-        },
-    ]
+    """从 AGENT_REGISTRY 动态加载 Agent 配置 → agent_configs 表。"""
+    from v7.agents import AGENT_REGISTRY
+
+    agent_defs = []
+    for Cls in AGENT_REGISTRY.values():
+        instance = Cls()
+        agent_defs.append({
+            "id": instance.config.agent_id,
+            "name": instance.config.name,
+            "discipline": instance.config.discipline,
+            "role_title": instance.config.role_title,
+            "experience_years": instance.config.experience_years,
+            "system_prompt": instance.build_system_prompt(),
+        })
 
     count = 0
     for a in agent_defs:
@@ -270,36 +177,117 @@ def migrate_settings(conn) -> int:
 
 
 def auto_migrate(force: bool = False) -> dict:
-    """自动检测并执行所有迁移。
+    """自动迁移所有配置到数据库。
+
+    迁移顺序: checkpoints → agents → api_keys → settings
+    每步失败不影响已成功的步骤（最终一致性）。
 
     Args:
-        force: 强制重新迁移（即使已有数据）
-
+        force: 强制执行覆盖已有数据，否则已有数据时跳过
     Returns:
-        {checkpoints: N, agents: N, api_keys: N, settings: N}
+        {checkpoints: N, agents: N, api_keys: N, settings: N, skipped: bool,
+         errors: [str]}
     """
     from .schema import get_db, init_db
 
     conn = get_db()
     init_db()
 
-    result = {}
+    result = {"checkpoints": 0, "agents": 0, "api_keys": 0, "settings": 0,
+              "skipped": False, "errors": []}
 
     # 检查是否已有数据（非强制模式跳过）
     if not force:
         existing = conn.execute("SELECT COUNT(*) FROM checkpoints").fetchone()[0]
         if existing > 0:
             logger.info(f"checkpoints 表已有 {existing} 条数据，跳过迁移（使用 --force 强制覆盖）")
-            return {"checkpoints": existing, "agents": 0, "api_keys": 0, "settings": 0, "skipped": True}
+            result["skipped"] = True
+            return result
 
-    result["checkpoints"] = migrate_checkpoints(conn)
-    result["agents"] = migrate_agents(conn)
-    result["api_keys"] = migrate_api_keys(conn)
-    result["settings"] = migrate_settings(conn)
-    result["skipped"] = False
+    # ---- 迁移前校验 ----
+    logger.info("迁移前校验...")
+    errors = _validate_sources()
+    if errors:
+        result["errors"] = errors
+        logger.error(f"迁移终止: {len(errors)} 个校验失败:\n" + "\n".join(f"  - {e}" for e in errors))
+        return result
 
-    logger.info(f"迁移完成: {result}")
+    # ---- 增量 Schema 迁移 ----
+    from .schema import apply_migrations
+    applied = apply_migrations()
+    if applied:
+        logger.info(f"  应用增量迁移: {applied}")
+
+    # ---- 分批迁移 ----
+    steps = [
+        ("checkpoints", migrate_checkpoints),
+        ("agents", migrate_agents),
+        ("api_keys", migrate_api_keys),
+        ("settings", migrate_settings),
+    ]
+    for key, fn in steps:
+        try:
+            result[key] = fn(conn)
+            logger.info(f"  ✓ {key}: {result[key]} 条")
+        except Exception as e:
+            msg = f"迁移 {key} 失败: {e}"
+            logger.error(msg, exc_info=True)
+            result["errors"].append(msg)
+
+    logger.info(f"迁移完成: checkpoints={result['checkpoints']} "
+                f"agents={result['agents']} api_keys={result['api_keys']} "
+                f"settings={result['settings']} errors={len(result['errors'])}")
     return result
+
+
+def _validate_sources() -> list:
+    """迁移前校验数据源完整性，返回错误列表。"""
+    errors = []
+
+    # 1. 校验 YAML 检查点文件
+    import yaml, glob
+    yaml_dir = os.path.join(HERE, "checkpoints", "definitions")
+    if not os.path.isdir(yaml_dir):
+        errors.append(f"检查点目录不存在: {yaml_dir}")
+    else:
+        yaml_files = glob.glob(os.path.join(yaml_dir, "*.yaml"))
+        if not yaml_files:
+            errors.append(f"检查点目录无 YAML 文件: {yaml_dir}")
+        for f in yaml_files:
+            try:
+                with open(f, "r", encoding="utf-8") as fh:
+                    data = yaml.safe_load(fh)
+                if not data:
+                    continue
+                if "checkpoints" not in data:
+                    # symbol_legend.yaml 等辅助文件无 checkpoints 键，正常
+                    continue
+            except Exception as e:
+                errors.append(f"YAML 解析失败: {os.path.basename(f)}: {e}")
+
+    # 2. 校验 Agent 注册中心
+    try:
+        from v7.agents import AGENT_REGISTRY
+        if not AGENT_REGISTRY:
+            errors.append("AGENT_REGISTRY 为空")
+        else:
+            for aid, cls in AGENT_REGISTRY.items():
+                try:
+                    inst = cls()
+                    prompt = inst.build_system_prompt()
+                    if not prompt:
+                        errors.append(f"Agent {aid}: build_system_prompt() 返回空字符串")
+                except Exception as e:
+                    errors.append(f"Agent {aid} 实例化失败: {e}")
+    except ImportError as e:
+        errors.append(f"无法导入 AGENT_REGISTRY: {e}")
+
+    # 3. 校验加密密钥存储（非阻塞，缺失时仅警告）
+    key_file = os.path.join(HERE, ".encrypted_keys.json")
+    if not os.path.exists(key_file):
+        logger.info("提醒: .encrypted_keys.json 不存在，api_keys 迁移将跳过")
+
+    return errors
 
 
 if __name__ == "__main__":

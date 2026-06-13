@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """Docx报告生成测试
 
+【LEGACY】旧v5-v6管线测试，依赖已归档的 llm_full_review.py。
+如需维护审查管线测试，请使用 v7/tests/test_smoke.py（v7管线）或重写本文件。
+
 测试报告生成函数 gen_scene1 / gen_scene2 / gen_scene3 的数据流正确性。
 """
 

@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 """LLM全流程审查管道测试
 
+【LEGACY】旧v5-v6管线测试，依赖 llm_full_review.py 旧管线。
+如需维护审查管线测试，请使用 v7/tests/test_smoke.py（v7管线）或重写本文件。
+
 测试 llm_full_review.py 的核心功能：
   - 文本数据加载与专业分组
   - Prompt 构建

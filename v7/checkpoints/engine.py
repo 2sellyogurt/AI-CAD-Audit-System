@@ -56,9 +56,9 @@ class CheckpointEngine:
         yaml_files = glob.glob(os.path.join(self._definitions_dir, "*.yaml"))
         yaml_files += glob.glob(os.path.join(self._definitions_dir, "*.yml"))
 
-        for yf in sorted(yaml_files):
+        for yaml_file in sorted(yaml_files):
             try:
-                with open(yf, "r", encoding="utf-8") as f:
+                with open(yaml_file, "r", encoding="utf-8") as f:
                     data = yaml.safe_load(f)
                 if not data:
                     continue
@@ -76,7 +76,7 @@ class CheckpointEngine:
                         self._by_discipline.setdefault(disc, []).append(cp)
                         self._by_type.setdefault(ctype, []).append(cp)
             except Exception as e:
-                logger.error(f"加载检查点文件失败: {yf}: {e}")
+                logger.error(f"加载检查点文件失败: {yaml_file}: {e}", exc_info=True)
 
         logger.info(f"检查点引擎加载完成: {len(self._checkpoints)}个检查点, "
                      f"{len(self._by_discipline)}个专业, {len(self._by_type)}种类型")
@@ -168,18 +168,21 @@ class CheckpointEngine:
         from v7.preprocessor.image_enhancer import enhance_png
         from v7.preprocessor.grid_splitter import split_to_grid, cleanup_grids
 
+        # 步骤1：对每张原始图纸做图像增强（对比度/锐化），提高视觉模型识别率
         enhanced_paths = []
-        for p in image_paths:
-            if os.path.exists(p) and os.path.getsize(p) > 0:
-                enhanced = enhance_png(p)
+        for img_path in image_paths:
+            if os.path.exists(img_path) and os.path.getsize(img_path) > 0:
+                enhanced = enhance_png(img_path)
                 enhanced_paths.append(enhanced)
 
+        # 步骤2：将增强后的图纸按内容密度切分为多个网格子图，便于视觉模型逐格审查
         all_grids = []
-        for ep in enhanced_paths:
-            grids, _ = split_to_grid(ep, min_density=0.005)
+        for enhanced_path in enhanced_paths:
+            grids, _ = split_to_grid(enhanced_path, min_density=0.005)
             all_grids.extend(grids)
 
         try:
+            # 分支A：网格数≤3，将全部网格合并送一次视觉模型审查（速度快，适合简单图纸）
             if len(all_grids) <= 3:
                 prompt = build_vision_prompt(cp, len(all_grids))
                 raw, provider = LLMFactory().call_with_failover(
@@ -191,6 +194,7 @@ class CheckpointEngine:
                 result.model_used = f"{provider}(enhanced)"
                 return result
             else:
+                # 分支B：网格数>3，逐格送视觉模型审查，收集所有不合规结果后取置信度最高的
                 provider_used = ""
                 grid_results = []
                 grid_prompt = build_vision_prompt(cp, 1)
@@ -219,10 +223,10 @@ class CheckpointEngine:
                 return result
         finally:
             cleanup_grids(all_grids)
-            for ep in enhanced_paths:
-                if ep not in image_paths:
+            for enhanced_path in enhanced_paths:
+                if enhanced_path not in image_paths:
                     try:
-                        os.remove(ep)
+                        os.remove(enhanced_path)
                     except OSError:
                         pass
 
@@ -311,16 +315,16 @@ class CheckpointEngine:
     def get_statistics(self, results: List[CheckResult]) -> Dict[str, Any]:
         stats = {"total": len(results), "compliant": 0, "non_compliant": 0,
                  "pending": 0, "error": 0, "by_severity": {}}
-        for r in results:
-            if r.verdict == "合规":
+        for result in results:
+            if result.verdict == "合规":
                 stats["compliant"] += 1
-            elif r.verdict == "不合规":
+            elif result.verdict == "不合规":
                 stats["non_compliant"] += 1
-            elif r.error:
+            elif result.error:
                 stats["error"] += 1
             else:
                 stats["pending"] += 1
-            sev = r.severity or "unknown"
+            sev = result.severity or "unknown"
             stats["by_severity"].setdefault(sev, 0)
             stats["by_severity"][sev] += 1
         return stats

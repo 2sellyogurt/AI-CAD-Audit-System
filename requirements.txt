@@ -29,8 +29,13 @@ requests>=2.28.0
 # Config encryption (API key secure storage)
 cryptography>=41.0.0
 
-# Image processing (large image compression)
+# Image processing (large image compression / visual path enhancement)
 Pillow>=10.0.0
+opencv-python>=4.8.0    # Windows: may require Visual C++ Redistributable; Linux: apt install libgl1-mesa-glx libglib2.0-0
+
+# Data processing & Excel export
+pandas>=2.0.0
+openpyxl>=3.1.0
 
 # Report generation (.docx)
 python-docx>=0.8.11

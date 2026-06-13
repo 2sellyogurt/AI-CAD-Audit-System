@@ -14,11 +14,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from v7.agents.base_agent import BaseAgent, AgentReport
-from v7.agents.discipline_agents import (
-    BuildingAgent, StructureAgent, HvacAgent, PlumbingAgent,
-    ElectricalAgent, FireAgent, FreeReviewAgent,
-    CurtainWallAgent, DecorationAgent, LandscapeAgent, FoundationPitAgent,
-)
+from v7.agents import AGENT_REGISTRY, BaseAgent, FreeReviewAgent
 
 logger = logging.getLogger("v7.scheduler")
 
@@ -106,22 +102,8 @@ class OrchestrationReport:
 
 class AgentOrchestrator:
 
-    AGENT_CLASSES = {
-        "building": BuildingAgent,
-        "structure": StructureAgent,
-        "hvac": HvacAgent,
-        "plumbing": PlumbingAgent,
-        "electrical": ElectricalAgent,
-        "fire": FireAgent,
-        "free_review": FreeReviewAgent,
-        "curtain_wall": CurtainWallAgent,
-        "decoration": DecorationAgent,
-        "landscape": LandscapeAgent,
-        "foundation_pit": FoundationPitAgent,
-    }
-
     def __init__(self, max_workers: int = 11):
-        self._max_workers = min(max_workers, len(self.AGENT_CLASSES))
+        self._max_workers = min(max_workers, len(AGENT_REGISTRY))
         self._agents: Dict[str, BaseAgent] = {}
         self._progress: Dict[str, str] = {}
         self._progress_lock = threading.Lock()
@@ -131,7 +113,7 @@ class AgentOrchestrator:
         return self._agents
 
     def create_all_agents(self) -> None:
-        for agent_id, agent_cls in self.AGENT_CLASSES.items():
+        for agent_id, agent_cls in AGENT_REGISTRY.items():
             self._agents[agent_id] = agent_cls()
         logger.info(f"创建{len(self._agents)}个Agent")
 

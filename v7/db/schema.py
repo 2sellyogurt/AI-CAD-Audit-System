@@ -168,7 +168,74 @@ CREATE TABLE IF NOT EXISTS schema_version (
     version         INTEGER PRIMARY KEY,
     applied_at      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
 );
+
+-- 增量迁移历史（记录每次迁移的名称和时间）
+CREATE TABLE IF NOT EXISTS migration_history (
+    migration_name  TEXT PRIMARY KEY,
+    applied_at      TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
 """
+
+
+def _current_schema_version() -> int:
+    """查询当前数据库的 schema 版本号。"""
+    try:
+        conn = get_db()
+        row = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()
+        return row[0] if row and row[0] else 0
+    except Exception:
+        return 0
+
+
+def _is_migration_applied(name: str) -> bool:
+    """检查指定迁移是否已执行过。"""
+    try:
+        conn = get_db()
+        row = conn.execute(
+            "SELECT 1 FROM migration_history WHERE migration_name = ?", (name,)
+        ).fetchone()
+        return row is not None
+    except Exception:
+        return False
+
+
+def _mark_migration_applied(name: str) -> None:
+    """标记一次迁移为已执行。"""
+    conn = get_db()
+    conn.execute(
+        "INSERT OR REPLACE INTO migration_history(migration_name) VALUES (?)",
+        (name,),
+    )
+    conn.commit()
+
+
+def apply_migrations() -> list:
+    """按顺序执行所有待应用的增量迁移，返回已执行的迁移名列表。"""
+    # 迁移定义列表：每个元组为 (迁移名, 目标schema版本, 迁移SQL或回调函数)
+    MIGRATIONS = [
+        # ("add_column_xxx", 2, "ALTER TABLE ... ADD COLUMN ..."),
+    ]
+
+    applied = []
+    for name, target_version, sql_or_fn in MIGRATIONS:
+        if _is_migration_applied(name):
+            continue
+        conn = get_db()
+        if callable(sql_or_fn):
+            sql_or_fn(conn)
+        else:
+            conn.executescript(sql_or_fn)
+        conn.execute(
+            "INSERT OR REPLACE INTO schema_version(version) VALUES (?)",
+            (target_version,),
+        )
+        _mark_migration_applied(name)
+        applied.append(name)
+
+    if applied:
+        import logging
+        logging.getLogger("v7.db").info(f"应用了 {len(applied)} 个迁移: {applied}")
+    return applied
 
 
 def get_db() -> sqlite3.Connection:
@@ -201,3 +268,82 @@ def close_db():
     if conn:
         conn.close()
         _local.connection = None
+
+
+def backup_database(backup_path: str = None) -> str:
+    """备份数据库文件到指定路径。
+
+    Args:
+        backup_path: 备份目标路径，默认自动生成时间戳文件名
+
+    Returns:
+        备份文件的绝对路径
+    """
+    import shutil
+    from datetime import datetime
+
+    if not os.path.isfile(DB_PATH):
+        raise FileNotFoundError(f"数据库文件不存在: {DB_PATH}")
+
+    if backup_path is None:
+        date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_dir = os.path.join(os.path.dirname(DB_PATH), "backups")
+        os.makedirs(backup_dir, exist_ok=True)
+        backup_path = os.path.join(backup_dir, f"v7_data_{date_str}.db")
+
+    # 使用 SQLite 内置备份 API 确保一致性
+    src_conn = get_db()
+    dst_conn = sqlite3.connect(backup_path)
+    src_conn.backup(dst_conn)
+    dst_conn.close()
+
+    return backup_path
+
+
+def restore_database(backup_path: str) -> None:
+    """从备份文件恢复数据库。
+
+    Args:
+        backup_path: 备份文件路径
+
+    Raises:
+        FileNotFoundError: 备份文件不存在
+    """
+    if not os.path.isfile(backup_path):
+        raise FileNotFoundError(f"备份文件不存在: {backup_path}")
+
+    # 关闭当前连接
+    close_db()
+
+    # 用备份覆盖当前数据库
+    import shutil
+    shutil.copy2(backup_path, DB_PATH)
+
+    # 重新打开连接
+    get_db()
+
+
+def list_backups() -> list:
+    """列出所有可用的数据库备份文件。"""
+    from datetime import datetime
+    backup_dir = os.path.join(os.path.dirname(DB_PATH), "backups")
+    if not os.path.isdir(backup_dir):
+        return []
+
+    backups = []
+    for fn in sorted(os.listdir(backup_dir), reverse=True):
+        if not fn.endswith(".db"):
+            continue
+        fp = os.path.join(backup_dir, fn)
+        try:
+            stat = os.stat(fp)
+            backups.append({
+                "filename": fn,
+                "path": fp,
+                "size": stat.st_size,
+                "size_formatted": f"{stat.st_size / 1024:.1f} KB" if stat.st_size < 1024 * 1024 else f"{stat.st_size / (1024 * 1024):.2f} MB",
+                "modified": datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
+            })
+        except OSError:
+            pass
+    return backups

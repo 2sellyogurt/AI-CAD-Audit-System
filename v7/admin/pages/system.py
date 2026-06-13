@@ -183,6 +183,14 @@ def handle_api(path, method, body, qs):
     if path == API_PREFIX + "/backup-db" and method == "POST":
         return _api_backup_db()
 
+    # ── GET /admin/api/system/backups ──
+    if path == API_PREFIX + "/backups" and method == "GET":
+        return _api_list_backups()
+
+    # ── POST /admin/api/system/restore-db ──
+    if path == API_PREFIX + "/restore-db" and method == "POST":
+        return _api_restore_db(body)
+
     # ── GET /admin/api/system/config-versions ──
     if path == API_PREFIX + "/config-versions" and method == "GET":
         return _api_config_versions()
@@ -393,24 +401,43 @@ def _api_remigrate():
 
 
 def _api_backup_db():
-    """备份数据库文件。"""
-    if not os.path.isfile(DB_PATH):
-        return _json(404, {"ok": False, "error": "数据库文件不存在"})
-
-    date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_name = f"v7_data_backup_{date_str}.db"
-    backup_path = os.path.join(V7_ROOT, backup_name)
-
+    """备份数据库文件（使用 SQLite 内置备份 API）。"""
     try:
-        shutil.copy2(DB_PATH, backup_path)
+        from v7.db.schema import backup_database
+        backup_path = backup_database()
         backup_size = os.path.getsize(backup_path)
         return _json(200, {
             "ok": True,
             "backup_path": backup_path,
-            "backup_name": backup_name,
+            "backup_name": os.path.basename(backup_path),
             "size": backup_size,
             "size_formatted": _format_size(backup_size),
         })
+    except Exception as e:
+        return _json(500, {"ok": False, "error": str(e)})
+
+
+def _api_list_backups():
+    """列出所有可用的数据库备份。"""
+    try:
+        from v7.db.schema import list_backups
+        backups = list_backups()
+        return _json(200, {"ok": True, "backups": backups, "total": len(backups)})
+    except Exception as e:
+        return _json(500, {"ok": False, "error": str(e)})
+
+
+def _api_restore_db(request_body=None):
+    """从备份恢复数据库。"""
+    backup_path = (request_body or {}).get("backup_path", "")
+    if not backup_path:
+        return _json(400, {"ok": False, "error": "缺少 backup_path 参数"})
+    try:
+        from v7.db.schema import restore_database
+        restore_database(backup_path)
+        return _json(200, {"ok": True, "message": f"已从 {os.path.basename(backup_path)} 恢复数据库"})
+    except FileNotFoundError as e:
+        return _json(404, {"ok": False, "error": str(e)})
     except Exception as e:
         return _json(500, {"ok": False, "error": str(e)})
 

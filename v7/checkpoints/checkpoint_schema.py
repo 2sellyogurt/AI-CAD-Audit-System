@@ -63,6 +63,8 @@ class Discipline(str, Enum):
     SUN_SHADE = "sun_shade"
     SIGN = "sign"
     ELEVATOR = "elevator"
+    SEISMIC_BRACING = "seismic_bracing"
+    EV_CHARGING = "ev_charging"
 
     @classmethod
     def _missing_(cls, value: str) -> "Discipline":
@@ -107,10 +109,22 @@ class CheckpointDefinition:
 
     @classmethod
     def from_yaml(cls, data: Dict[str, Any]) -> "CheckpointDefinition":
+        disc_raw = data.get("discipline", "building")
+        try:
+            disc = Discipline(disc_raw)
+            # 检查是否回退到了默认值（用户写了一个不存在的专业）
+            if disc_raw.lower().replace(" ", "_") != disc.value and disc == Discipline.BUILDING:
+                import logging
+                logging.getLogger("v7.checkpoints").warning(
+                    f"检查点 {data.get('id', '?')} 的专业 '{disc_raw}' 不在 Discipline 枚举中，"
+                    f"已回退为 'building'。请检查 YAML 或更新 checkpoint_schema.py"
+                )
+        except ValueError:
+            disc = Discipline.BUILDING
         return cls(
             id=data.get("id", ""),
             name=data.get("name", ""),
-            discipline=Discipline(data.get("discipline", "building")),
+            discipline=disc,
             standard_code=data.get("standard_code", ""),
             standard_clause=data.get("standard_clause", ""),
             clause_text=data.get("clause_text", ""),

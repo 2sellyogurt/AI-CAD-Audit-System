@@ -1,0 +1,369 @@
+discipline: smart
+description: 智能化专项检查点 - 15个高频检查项（综合布线/安防/设备监控/信息发布/机房）
+
+checkpoints:
+
+  # ============================================================================
+  # SMART-001 ~ SMART-015: 智能化专业15个高频检查项
+  # 引用标准: GB50314-2015  智能建筑设计标准
+  #           GB50311-2016  综合布线系统工程设计规范
+  #           GB50348-2018  安全防范工程技术标准
+  #           GB50174-2017  数据中心设计规范
+  #           GB50339-2013  智能建筑工程质量验收规范
+  #           GB50116-2013  火灾自动报警系统设计规范
+  # ============================================================================
+
+  # ---------------------------------------------------------------------------
+  # 1. 综合布线信息点密度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-001
+    name: 综合布线信息点密度检查
+    description: 检查各功能区信息点设置密度是否满足使用需求
+    discipline: smart
+    check_type: count_min
+    route: text
+    severity: B
+    priority: 90
+    standard_code: GB50314-2015
+    standard_clause: "4.5.2"
+    clause_text: "信息设施系统应满足建筑功能需求，信息端口配置应符合功能区域的使用要求"
+    target_object: ["信息点", "数据点", "网络插座", "TO"]
+    target_property: "信息点密度"
+    operator: ">="
+    limit_value: 1
+    unit: "个/工位"
+    keywords: ["信息点", "数据点", "TO", "网络插座", "综合布线"]
+    suggestion_template: "信息点设置密度不足，请按GB50314-2015 4.5.2条复核各功能区信息端口需求并补充"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 2. 弱电间/电信间面积检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-002
+    name: 弱电间面积检查
+    description: 检查弱电间/电信间的最小使用面积是否满足设备安装和维护要求
+    discipline: smart
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 88
+    standard_code: GB50311-2016
+    standard_clause: "7.2.6"
+    clause_text: "电信间的使用面积不应小于5㎡。当电信间内需设置其他通信设施和弱电系统设备箱柜时，应增加使用面积"
+    target_object: ["弱电间", "电信间", "弱电竖井"]
+    target_property: "弱电间面积"
+    operator: ">="
+    limit_value: 5.0
+    unit: "㎡"
+    keywords: ["弱电间", "电信间", "竖井", "IDF"]
+    suggestion_template: "弱电间面积不足5㎡，请按GB50311-2016 7.1.3条扩大弱电间面积或增设电信间"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 3. 视频监控覆盖范围检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-003
+    name: 视频监控覆盖范围检查
+    description: 检查视频监控摄像机的布点是否覆盖所有规定区域
+    discipline: smart
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 95
+    standard_code: GB50348-2018
+    standard_clause: "6.4.5"
+    clause_text: "视频采集设备的监控范围应有效覆盖被保护部位、区域或目标，监视效果应满足场景和目标特征识别的不同需求"
+    target_object: ["视频监控", "摄像机", "安防监控"]
+    target_property: "监控覆盖"
+    keywords: ["摄像机", "监控", "安防", "摄像头", "CCTV"]
+    suggestion_template: "视频监控覆盖范围不足，请按GB50348-2018 6.1.2条补充建筑出入口、电梯轿厢、重要机房等区域的摄像机布点"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 4. 入侵报警系统设置检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-004
+    name: 入侵报警系统设置检查
+    description: 检查规定场所是否按要求设置了入侵报警系统
+    discipline: smart
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 93
+    standard_code: GB50348-2018
+    standard_clause: "6.4.3"
+    clause_text: "入侵和紧急报警系统应对保护区域的非法隐蔽进入、强行闯入以及撬、挖、凿等破坏行为进行实时有效的探测与报警"
+    target_object: ["入侵报警", "防盗报警", "周界报警"]
+    target_property: "入侵报警设置"
+    keywords: ["入侵报警", "防盗报警", "周界报警", "红外探测"]
+    suggestion_template: "入侵报警系统设置不满足规范要求，请按GB50348-2018 6.2.1条在周界和重要区域增设探测装置"
+    applicable_building_types: ["公共建筑", "教育建筑", "医疗建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 5. 门禁系统设置检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-005
+    name: 门禁系统设置检查
+    description: 检查重要区域是否按要求设置了出入口控制系统（门禁）
+    discipline: smart
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 87
+    standard_code: GB50348-2018
+    standard_clause: "6.4.7"
+    clause_text: "出入口控制系统应根据不同的通行对象进出各受控区的安全管理要求，在出入口处对其所持有的凭证进行识别查验，对其进出实施授权、实时控制与管理"
+    target_object: ["门禁", "出入口控制", "读卡器", "电控锁"]
+    target_property: "门禁设置"
+    keywords: ["门禁", "读卡器", "出入口控制", "电控锁", "人脸识别"]
+    suggestion_template: "重要区域未设置门禁系统，请按GB50348-2018 6.3.1条在重要机房、资料室等增设出入口控制系统"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 6. 建筑设备监控系统设置检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-006
+    name: 建筑设备监控系统设置检查
+    description: 检查大中型公共建筑是否设置了楼宇自控系统（BAS）
+    discipline: smart
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 86
+    standard_code: GB50314-2015
+    standard_clause: "4.4.1"
+    clause_text: "建筑面积大于20000㎡的公共建筑应设置建筑设备监控系统，实现对暖通空调、给排水、供配电等设备的集中监控"
+    target_object: ["建筑设备监控", "楼宇自控", "BAS", "DDC"]
+    target_property: "设备监控系统设置"
+    keywords: ["楼宇自控", "BAS", "DDC", "设备监控", "建筑设备管理系统"]
+    suggestion_template: "建筑设备监控系统未设置或不完整，请按GB50314-2015 4.4.1条补充暖通、给排水、供配电等子系统的监控点位"
+    applicable_building_types: ["公共建筑", "教育建筑", "医疗建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 7. 消防控制室与安防监控室合设检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-007
+    name: 消防控制室与安防监控室合设检查
+    description: 检查消防控制室与安防监控室是否按要求合设或邻近布置
+    discipline: smart
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 75
+    standard_code: GB50116-2013
+    standard_clause: "3.4.8"
+    clause_text: "消防控制室宜与安防监控室合并设置，当分开设置时应采用专用通信线路互联"
+    target_object: ["消防控制室", "安防监控室", "监控中心"]
+    target_property: "控制室合设"
+    keywords: ["消防控制室", "安防监控室", "监控中心", "控制室"]
+    suggestion_template: "建议将消防控制室与安防监控室合并设置，便于应急联动指挥"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 8. 信息发布系统设置检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-008
+    name: 信息发布系统设置检查
+    description: 检查公共建筑是否在主要出入口、电梯厅等区域设置了信息发布终端
+    discipline: smart
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 65
+    standard_code: GB50314-2015
+    standard_clause: "4.6.2"
+    clause_text: "公共建筑应在主要出入口、电梯厅、会议室门口等位置设置信息发布显示屏或终端"
+    target_object: ["信息发布", "信息引导", "电子屏", "发布终端"]
+    target_property: "信息发布设置"
+    keywords: ["信息发布", "电子屏", "LED", "液晶", "发布终端"]
+    suggestion_template: "信息发布系统未设置或不完整，请按GB50314-2015 4.6.2条在主要出入口和电梯厅增设信息发布终端"
+    applicable_building_types: ["公共建筑", "教育建筑", "医疗建筑", "交通建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 9. 数据中心/机房面积与承重检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-009
+    name: 数据中心机房面积检查
+    description: 检查数据中心或总机房的最小面积和楼面承重是否满足设备安装要求
+    discipline: smart
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 91
+    standard_code: GB50174-2017
+    standard_clause: "4.2.2"
+    clause_text: "主机房的使用面积应根据电子信息设备的数量、外形尺寸和布置方式确定。A级数据中心主机房使用面积不宜小于500㎡，B级不宜小于200㎡，C级不宜小于50㎡"
+    target_object: ["数据中心", "主机房", "总机房", "信息中心"]
+    target_property: "机房面积"
+    operator: ">="
+    limit_value: 50
+    unit: "㎡"
+    keywords: ["数据中心", "机房", "主机房", "信息中心", "弱电机房"]
+    suggestion_template: "数据中心/总机房面积不足，请按GB50174-2017 4.2.1条根据等级要求扩大机房面积"
+    applicable_building_types: ["公共建筑", "教育建筑", "医疗建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 10. 布线线缆防火等级检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-010
+    name: 综合布线线缆防火等级检查
+    description: 检查综合布线系统采用的线缆是否符合相应防火等级要求
+    discipline: smart
+    check_type: material_spec
+    route: text
+    severity: A
+    priority: 92
+    standard_code: GB50311-2016
+    standard_clause: "8.0.2"
+    clause_text: "综合布线系统应根据敷设环境选用相应阻燃等级的线缆：垂直竖井应采用CMP/OFNP级，水平区域可采用CMR/OFNR级及以上"
+    target_object: ["线缆", "光缆", "铜缆", "综合布线"]
+    target_property: "线缆防火等级"
+    keywords: ["线缆", "阻燃", "CMP", "CMR", "OFNP", "光缆"]
+    suggestion_template: "综合布线线缆防火等级不满足规范要求，请按GB50311-2016 8.0.2条选用相应阻燃等级的产品"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 11. UPS不间断电源容量检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-011
+    name: UPS不间断电源容量检查
+    description: 检查弱电系统UPS后备电源的容量和供电时间是否满足规范要求
+    discipline: smart
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 84
+    standard_code: GB50174-2017
+    standard_clause: "8.1.12"
+    clause_text: "A级数据中心UPS蓄电池后备时间不应小于15min，B级不应小于7min；实际工程应根据柴油发电机启动时间确定"
+    target_object: ["UPS", "不间断电源", "后备电源"]
+    target_property: "UPS后备时间"
+    operator: ">="
+    limit_value: 15
+    unit: "min"
+    keywords: ["UPS", "不间断电源", "后备电源", "蓄电池"]
+    suggestion_template: "弱电系统UPS后备时间不足，请按GB50174-2017 8.1.12条根据数据中心等级配置UPS"
+    applicable_building_types: ["公共建筑", "教育建筑", "医疗建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 12. 防雷接地与等电位联结检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-012
+    name: 智能化设备防雷接地检查
+    description: 检查智能化系统设备和弱电机房的防雷接地及等电位联结设计是否完整
+    discipline: smart
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 94
+    standard_code: GB50343-2012
+    standard_clause: "5.4.3"
+    clause_text: "电源线路浪涌保护器（SPD）安装时，连接导线应平直且总长度不宜大于0.5m；信号线路浪涌保护器应按被保护设备的工作频率和传输介质选用适配的产品"
+    target_object: ["防雷接地", "等电位联结", "SPD", "浪涌保护器"]
+    target_property: "防雷接地设计"
+    keywords: ["防雷", "接地", "等电位", "SPD", "浪涌保护", "屏蔽"]
+    suggestion_template: "智能化设备防雷接地设计不完整，请按GB50343-2012 5.4.1条补充SPD分级防护和等电位联结设计"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 13. 电子巡查系统设置检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-013
+    name: 电子巡查系统设置检查
+    description: 检查大型公共建筑是否设置了电子巡查管理系统
+    discipline: smart
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 55
+    standard_code: GB50348-2018
+    standard_clause: "6.4.1"
+    clause_text: "安全防范等级一级和二级的单位应设置电子巡查系统，在建筑周界、重要区域和要害部位设置巡查点"
+    target_object: ["电子巡查", "巡更", "巡查系统"]
+    target_property: "电子巡查设置"
+    keywords: ["巡查", "巡更", "电子巡查", "巡逻"]
+    suggestion_template: "建议增设电子巡查系统，按GB50348-2018 6.4.1条在重要区域设置巡查点"
+    applicable_building_types: ["公共建筑", "教育建筑", "工业建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 14. 广播与会议系统设置检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-014
+    name: 公共广播系统设置检查
+    description: 检查大中型公共建筑是否设置了公共广播系统（含消防应急广播）
+    discipline: smart
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 60
+    standard_code: GB50314-2015
+    standard_clause: "4.7.1"
+    clause_text: "公共建筑应设置公共广播系统，且应与消防应急广播系统兼容或共用"
+    target_object: ["公共广播", "消防广播", "应急广播", "广播系统"]
+    target_property: "广播系统设置"
+    keywords: ["广播", "扬声器", "应急广播", "公共广播", "扩声"]
+    suggestion_template: "公共广播系统未设置或与消防广播未兼容，请按GB50314-2015 4.7.1条整合设计"
+    applicable_building_types: ["公共建筑", "教育建筑", "医疗建筑", "交通建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 15. 桥架/线槽敷设路径与强电间距检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: SMART-015
+    name: 弱电桥架与强电间距检查
+    description: 检查弱电线槽/桥架与强电桥架的间距是否满足电磁兼容要求
+    discipline: smart
+    check_type: clearance_check
+    route: text
+    severity: B
+    priority: 82
+    standard_code: GB50311-2016
+    standard_clause: "8.0.5"
+    clause_text: "综合布线缆线与电力电缆的净距应符合表8.0.5的规定：380V电力电缆<2kVA时平行净距≥130mm，2-5kVA时≥300mm，>5kVA时≥600mm"
+    target_object: ["弱电桥架", "弱电线槽", "综合布线桥架"]
+    target_property: "强弱电间距"
+    operator: ">="
+    limit_value: 300
+    unit: "mm"
+    keywords: ["桥架", "线槽", "强弱电", "电磁兼容", "间距"]
+    suggestion_template: "弱电桥架与强电桥架间距不足，请按GB50311-2016 8.0.5条调整敷设位置或增设屏蔽措施"
+    applicable_building_types: ["全部"]
+
+  # ==========================================================================
+  # 16. 智能化管线与机电管综碰撞检查 (A级)
+  # ==========================================================================
+  - id: SMART-016
+    name: 智能化管线与机电管综碰撞检查
+    description: 检查弱电桥架/线槽/预埋管与暖通风管、给排水管道、消防管道是否存在空间冲突
+    discipline: smart
+    check_type: spatial_relation
+    route: dual
+    severity: A
+    priority: 96
+    standard_code: GB50311-2016
+    standard_clause: "8.0.1"
+    clause_text: "综合布线系统缆线的敷设路由应避免与强电、暖通、给排水等管线产生交叉干扰；当无法避开时，应采取金属管槽屏蔽或加大间距等隔离措施"
+    target_object: ["弱电桥架", "弱电线槽", "预埋管", "风管", "水管", "消防管"]
+    target_property: "管线空间冲突"
+    keywords: ["桥架", "线槽", "风管", "水管", "碰撞", "交叉", "净距", "标高"]
+    suggestion_template: "智能化管线与机电管线存在空间冲突，请按GB50311-2016 7.1.1条调整路由或标高。建议：弱电桥架优先敷设于强电下方、水管上方，交叉处取合理间距≥150mm"
+    applicable_building_types: ["全部"]
+
+  # ==========================================================================
+  # 17. 室外智能化管线红线内敷设检查 (B级)
+  # ==========================================================================
+  - id: SMART-017
+    name: 室外智能化管线红线内敷设检查
+    description: 检查室外通信光缆/电缆、安防线路等智能化管线是否在建筑红线范围内敷设，与其它市政管线间距是否合规
+    discipline: smart
+    check_type: spatial_relation
+    route: text
+    severity: B
+    priority: 83
+    standard_code: GB50289-2016
+    standard_clause: "4.1.3"
+    clause_text: "工程管线在道路下面敷设时，应按从道路红线向道路中心线方向平行布置：电力→电信→燃气→给水→雨水→污水。电信管线与其它管线的水平净距：≥0.5m（压力<0.4MPa燃气管）, ≥1.0m（电力电缆）"
+    target_object: ["通信管道", "光缆", "弱电管线", "红线", "室外管网"]
+    target_property: "管线敷设位置"
+    keywords: ["红线", "用地红线", "通信管道", "手孔井", "室外管线", "光缆路由"]
+    suggestion_template: "室外智能化管线超出建筑红线或与其它管线间距不足，请按GB50289-2016 4.1.3条调整：通信管道优先敷设于电力与燃气之间，距电力≥1.0m、距燃气≥0.5m，且必须在红线内"
+    applicable_building_types: ["全部"]

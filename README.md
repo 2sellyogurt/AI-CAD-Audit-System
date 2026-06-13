@@ -68,12 +68,14 @@ It covers **12 engineering disciplines** and supports the full pipeline from DXF
 
 - Python 3.10+
 - pip
+- **Windows**: Visual C++ Redistributable (required by OpenCV)
+- **Linux**: `sudo apt install libgl1-mesa-glx libglib2.0-0` (required by OpenCV)
 
 ### Installation
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/AI-CAD-Audit-System.git
+git clone https://github.com/AI-CAD-Audit/AI-CAD-Audit-System.git
 cd AI-CAD-Audit-System
 
 # Install dependencies
@@ -98,6 +100,12 @@ export OPENAI_API_KEY="your-api-key"
 ### Usage
 
 ```bash
+# Start via unified launcher (recommended)
+python v7/launcher.py
+
+# Start without auto-opening browser
+python v7/launcher.py --no-browser
+
 # Full review pipeline (requires DXF files + LLM API key)
 python v7/master_v7.py
 
@@ -114,11 +122,14 @@ python v7/master_v7.py --review-only
 ### Web UI
 
 ```bash
-# Start admin dashboard
-python v7/admin/server.py
+# Start admin dashboard + frontend + review UI (recommended)
+python v7/launcher.py
 
-# Start review interface
-python v7/review_ui/app.py
+# Or start admin server directly
+python -m v7.admin.server
+
+# Build EXE (Windows)
+cd v7 && pyinstaller launcher.spec
 ```
 
 ## Checkpoint Coverage

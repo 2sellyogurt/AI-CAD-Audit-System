@@ -1278,31 +1278,33 @@ var FALLBACK_ALL_ISSUES = [
 ];
 
 var FALLBACK_STATS = {
-  totalDisciplines: 18, availableDisciplines: 15,
+  totalDisciplines: 20, availableDisciplines: 18,
   totalIssues: 89, aIssues: 26, bIssues: 37, cIssues: 23, dIssues: 3,
   r0Count: 3, r1Count: 52, r2Count: 34, r3Count: 0,
   spatialConflicts: 1047, totalConflictClusters: 4327, reviewTime: '~10min'
 };
 
 var FALLBACK_DISCIPLINES = [
-  { id:'foundation', name:'基坑', available:true, issueCount:1 },
-  { id:'architecture', name:'建筑', available:true, issueCount:1 },
+  { id:'foundation_pit', name:'基坑', available:true, issueCount:1 },
+  { id:'building', name:'建筑', available:true, issueCount:1 },
   { id:'structure', name:'结构', available:true, issueCount:2 },
-  { id:'water_supply', name:'给排水', available:true, issueCount:2 },
+  { id:'plumbing', name:'给排水', available:true, issueCount:2 },
   { id:'hvac', name:'暖通', available:true, issueCount:2 },
   { id:'electrical', name:'电气', available:true, issueCount:3 },
   { id:'fire', name:'消防', available:true, issueCount:2 },
   { id:'curtain_wall', name:'幕墙', available:true, issueCount:1 },
   { id:'decoration', name:'装饰', available:true, issueCount:1 },
   { id:'landscape', name:'景观', available:true, issueCount:1 },
-  { id:'signage', name:'标识标线', available:true, issueCount:0 },
+  { id:'sign', name:'标识标线', available:true, issueCount:0 },
   { id:'door_window', name:'门窗', available:true, issueCount:2 },
   { id:'substation', name:'变配电', available:true, issueCount:0 },
   { id:'prefab', name:'装配式', available:true, issueCount:0 },
   { id:'outdoor_pipe', name:'室外管综', available:true, issueCount:1 },
   { id:'solar', name:'光伏', available:true, issueCount:0 },
   { id:'elevator', name:'电梯', available:true, issueCount:1 },
-  { id:'smart', name:'智能化', available:false, issueCount:0 }
+  { id:'smart', name:'智能化', available:true, issueCount:0 },
+  { id:'seismic_bracing', name:'抗震支架', available:true, issueCount:0 },
+  { id:'ev_charging', name:'充电桩', available:true, issueCount:0 }
 ];
 
 /* ============================================================

@@ -25,9 +25,7 @@ from v7.llm import LLMFactory
 from v7.checkpoints import CheckpointEngine
 from v7.preprocessor import DrawingExtractor, StandardizationChecker
 from v7.problem_pool import ProblemPool, UnifiedIssue, Provenance, DataSource
-from v7.agents import (BuildingAgent, StructureAgent, HvacAgent, PlumbingAgent,
-                       ElectricalAgent, FireAgent, FreeReviewAgent, ChiefAgent,
-                       CurtainWallAgent, DecorationAgent, LandscapeAgent, FoundationPitAgent)
+from v7.agents import AGENT_REGISTRY, ChiefAgent
 from v7.scheduler import AgentOrchestrator
 from v7.audit import FalseNegativeAuditor
 from v7.scanner import DrawingScanner
