@@ -126,9 +126,10 @@ def run_dry_run(args):
     print(f"  抽样: {audit_report.sample_size}/{audit_report.total_passed}, 假阴性率: {audit_report.false_negative_rate:.2%}")
 
     elapsed = time.time() - t0
+    stats = pool.stats()
     print(f"\n{'='*60}")
     print(f"  干跑完成，耗时 {elapsed:.1f} 秒")
-    print(f"  所有 {len(pool)} 个模块验证通过 ✓")
+    print(f"  所有 {stats.get('total', len(pool._issues))} 个模块验证通过 ✓")
     print(f"{'='*60}")
     return pool
 
