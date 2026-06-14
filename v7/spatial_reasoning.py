@@ -695,7 +695,8 @@ class SpatialAnalyzer:
                         txt = e.plain_text() if hasattr(e, 'plain_text') else (
                             e.dxf.text if et == "TEXT" else e.text)
                     except Exception as e:
-                        logger.debug(f"文本提取失败: {e}")
+                        import logging
+                        logging.getLogger(__name__).debug(f"文本提取失败: {e}")
                         txt = ""
                     if not txt or not txt.strip():
                         continue
@@ -809,7 +810,8 @@ class SpatialAnalyzer:
                         doc_tmp = ezdxf.readfile(dxf)
                         dxf_layers = [layer.dxf.name for layer in doc_tmp.layers]
                     except Exception as e:
-                        logger.debug(f"读取DXF图层失败: {dxf}, {e}")
+                        import logging
+                        logging.getLogger(__name__).debug(f"读取DXF图层失败: {dxf}, {e}")
                     semantic_label = vlm_extractor.extract_all(
                         image_path=png_path or "",
                         drawing_name=name,

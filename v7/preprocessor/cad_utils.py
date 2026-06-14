@@ -1,5 +1,8 @@
 import os
+import logging
 from typing import Optional
+
+logger = logging.getLogger("v7.preprocessor.cad_utils")
 
 _DEFAULT_AUTOCAD_PATHS = [
     r"C:\Program Files\Autodesk\AutoCAD 2024\acad.exe",

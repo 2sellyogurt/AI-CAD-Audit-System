@@ -12,6 +12,10 @@
   config_versions  配置变更版本历史
 """
 
+import logging
+
+logger = logging.getLogger("v7.db.schema")
+
 import os
 import sqlite3
 import threading

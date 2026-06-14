@@ -388,7 +388,8 @@ class FreeReviewAgent(BaseAgent):
                     self._report.issues_found += 1
 
         except Exception as e:
-            logger.error(f"检查点执行失败: {cp.name}, {e}")
+            logger = logging.getLogger("v7.agents.discipline")
+            logger.error(f"自由审查执行失败: {e}")
             self._report.errors += 1
 
         self._report.total_time_ms = (time.time() - start) * 1000
