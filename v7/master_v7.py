@@ -472,7 +472,7 @@ def main():
 
     if args.conflict_status:
         run_conflict_status(args)
-        return
+        return 0
 
     if args.review_only:
         pool = ProblemPool()
@@ -487,12 +487,14 @@ def main():
             print(f"从 {args.review_only} 加载 {len(pool._issues)} 个问题")
         from v7.review_ui import run_server
         run_server(pool, "审查项目", args.port, args.output_dir)
-        return
+        return 0
 
     if args.demo:
         run_demo(args)
+        return 0
     elif args.dry_run:
         run_dry_run(args)
+        return 0
     else:
         if not os.environ.get("ZHIPU_API_KEY") and not os.environ.get("DEEPSEEK_API_KEY"):
             print("⚠️  未检测到LLM API Key环境变量")
@@ -500,6 +502,7 @@ def main():
             print("  或用 --dry-run 干跑模式 / --demo 演示模式\n")
             return 1
         run_full(args)
+        return 0
 
 
 if __name__ == "__main__":
