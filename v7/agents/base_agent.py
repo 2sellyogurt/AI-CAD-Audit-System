@@ -65,10 +65,55 @@ class BaseAgent(ABC):
         self.config = config
         self._engine = None
         self._llm = None
+        self._project_params = None  # 项目参数（由master_v7注入）
         self._report = AgentReport(
             agent_id=config.agent_id,
             agent_name=config.name,
         )
+
+    def set_project_params(self, params):
+        """设置项目参数（由master_v7在审查前调用）"""
+        self._project_params = params
+
+    def get_project_params_text(self) -> str:
+        """获取项目参数的prompt文本"""
+        if not self._project_params:
+            return ""
+        
+        lines = ["## 项目参数"]
+        
+        # 映射字段名到中文标签
+        param_labels = {
+            "project_name": "项目名称",
+            "building_height": "建筑高度",
+            "floor_count": "地上层数",
+            "underground_floor_count": "地下层数",
+            "fire_resistance": "耐火等级",
+            "seismic_level": "抗震设防烈度",
+            "building_type": "建筑类型",
+            "structural_system": "结构体系",
+            "area": "建筑面积",
+        }
+        
+        for key, label in param_labels.items():
+            val = getattr(self._project_params, key, None)
+            if val is not None and val != "" and val != 0:
+                # 添加单位
+                if key == "building_height":
+                    lines.append(f"- {label}: {val}m")
+                elif key == "area":
+                    lines.append(f"- {label}: {val}㎡")
+                elif key in ["floor_count", "underground_floor_count"]:
+                    lines.append(f"- {label}: {val}层")
+                else:
+                    lines.append(f"- {label}: {val}")
+        
+        if len(lines) <= 1:  # 只有标题，无参数
+            return ""
+        
+        lines.append("")
+        lines.append("> 以上参数从图框自动提取，可信度见各项标注")
+        return "\n".join(lines)
 
     @property
     def engine(self):
@@ -182,10 +227,18 @@ class BaseAgent(ABC):
 
         batches = self._build_drawing_batches(drawings, image_paths)
         total_chars = sum(len(b[0]) for b in batches)
+        
+        # 注入项目参数到批次文本
+        params_text = self.get_project_params_text()
+        if params_text:
+            batches = [(params_text + "\n\n" + text, imgs) for text, imgs in batches]
+            total_chars += len(params_text)
+        
         logger.info(
             f"{self.config.name}: {len(drawings)}张→{len(batches)}批(共{total_chars}字), "
             f"{len(checkpoints)}个检查点"
             + (f" (过滤{skip_severities})" if skip_severities else "")
+            + (f" (含项目参数)" if params_text else "")
         )
 
         for cp in checkpoints:

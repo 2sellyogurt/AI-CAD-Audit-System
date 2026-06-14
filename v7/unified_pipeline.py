@@ -71,7 +71,8 @@ def run_spatial_pipeline():
                     analyzer.elevation_tags.append(ElevationTag(**et_data))
                 cache_hits += 1
                 continue
-            except Exception:
+            except Exception as e:
+                logging.getLogger(__name__).debug(f"空间分析缓存读取失败: {e}")
                 pass
         disc = classify_enhanced(name)
         before = len(analyzer.entities)
@@ -92,8 +93,8 @@ def run_spatial_pipeline():
         try:
             with open(cache_file, "w", encoding="utf-8") as cf:
                 json.dump(cache_data, cf, ensure_ascii=False, indent=2)
-        except Exception:
-            pass
+        except Exception as e:
+            logging.getLogger(__name__).debug(f"空间分析缓存写入失败: {e}")
 
     t1 = time.time()
     print(f"  实体加载: {len(analyzer.entities)} 实体, 缓存命中:{cache_hits}/{len(dxf_paths)}, 耗时{t1-t0:.0f}s", flush=True)

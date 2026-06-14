@@ -97,8 +97,8 @@ def print_drawing_autocad(dxf_path: str, output_png: str,
     finally:
         try:
             os.remove(script_path)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"清理打印脚本失败: {script_path}, {e}")
 
 
 _CJK_FONT_CANDIDATES = [
@@ -155,7 +155,8 @@ def _load_cjk_font(size: int = 16) -> Tuple[object, str]:
             font = ImageFont.truetype(fp, size)
             logger.debug(f"CJK字体加载成功: {os.path.basename(fp)} ({size}px)")
             return font, os.path.basename(fp)
-        except Exception:
+        except Exception as e:
+            logger.debug(f"CJK字体加载失败: {fp}, {e}")
             continue
 
     for name in _CJK_FONT_CANDIDATES:
@@ -163,15 +164,16 @@ def _load_cjk_font(size: int = 16) -> Tuple[object, str]:
             font = ImageFont.truetype(name, size)
             logger.debug(f"CJK字体加载成功(系统路径): {name}")
             return font, name
-        except Exception:
+        except Exception as e:
+            logger.debug(f"CJK字体加载失败(系统路径): {name}, {e}")
             continue
 
     try:
         font = ImageFont.load_default()
         logger.warning("CJK字体未找到，使用Pillow默认字体（中文可能显示为方块）")
         return font, "default"
-    except Exception:
-        logger.warning("无可用字体，文本渲染将缺失")
+    except Exception as e:
+        logger.warning(f"无可用字体，文本渲染将缺失: {e}")
         return None, "none"
 
 
@@ -245,7 +247,8 @@ def print_drawing_ezdxf(dxf_path: str, output_png: str, dpi: int = 150) -> bool:
             return False
     except subprocess.TimeoutExpired:
         return False
-    except Exception:
+    except Exception as e:
+        logger.warning(f"ezdxf渲染失败: {dxf_path}, {e}")
         return False
 
 

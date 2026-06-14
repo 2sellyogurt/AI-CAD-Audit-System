@@ -135,7 +135,8 @@ class DrawingExtractor:
                 for chunk in iter(lambda: f.read(65536), b""):
                     h.update(chunk)
             return h.hexdigest()
-        except Exception:
+        except Exception as e:
+            logger.debug(f"计算文件哈希失败: {dxf_path}, {e}")
             return ""
 
     def _cache_key(self, dxf_path: str) -> str:
@@ -333,7 +334,8 @@ class DrawingExtractor:
                 import ezdxf as _ezdxf
                 try:
                     doc = _ezdxf.readfile(dxf_path)
-                except Exception:
+                except Exception as e:
+                    logger.warning(f"ezdxf读取DXF失败: {dxf_path}, {e}")
                     doc = None
 
                 if doc is None:

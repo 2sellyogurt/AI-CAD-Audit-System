@@ -20,6 +20,7 @@ import os
 import json
 import uuid
 import logging
+import threading
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -32,13 +33,15 @@ app = Flask(__name__)
 app.secret_key = os.environ.get("V7_SECRET_KEY", "v7-review-secret-development")
 
 _pool = None
+_pool_lock = threading.Lock()
 _audit_log_path = ""
 _chart_data_cache: Dict[str, Any] = {}
 
 
 def init_app(problem_pool, project_name: str = "", audit_log_dir: str = ""):
     global _pool, _audit_log_path
-    _pool = problem_pool
+    with _pool_lock:
+        _pool = problem_pool
     app.config["PROJECT_NAME"] = project_name or "施工图审查项目"
 
     audit_dir = audit_log_dir or os.path.join(

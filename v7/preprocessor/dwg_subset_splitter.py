@@ -78,7 +78,8 @@ def _entity_bbox(entity) -> Optional[Tuple[float, float, float, float]]:
                 tp = entity.dxf.text_midpoint if hasattr(entity.dxf, "text_midpoint") else dp
                 return (min(dp[0], tp[0]), min(dp[1], tp[1]),
                         max(dp[0], tp[0]), max(dp[1], tp[1]))
-            except Exception:
+            except Exception as e:
+                logger.debug(f"DIMENSION包围盒计算失败: {e}")
                 return None
         elif etype == "HATCH":
             try:
@@ -94,8 +95,8 @@ def _entity_bbox(entity) -> Optional[Tuple[float, float, float, float]]:
                     xs = [p[0] for p in all_pts]
                     ys = [p[1] for p in all_pts]
                     return (min(xs), min(ys), max(xs), max(ys))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"HATCH包围盒计算失败: {e}")
             return None
         elif etype == "POINT":
             loc = entity.dxf.location
@@ -103,10 +104,12 @@ def _entity_bbox(entity) -> Optional[Tuple[float, float, float, float]]:
         elif etype == "ELLIPSE":
             cx, cy = entity.dxf.center[0], entity.dxf.center[1]
             if hasattr(entity.dxf, "major_axis") and entity.dxf.major_axis:
-                rx = abs(entity.dxf.major_axis[0])
+                # major_axis 是向量，使用模长
+                rx = (entity.dxf.major_axis[0]**2 + entity.dxf.major_axis[1]**2)**0.5
             else:
                 rx = 100
             if hasattr(entity.dxf, "minor_axis") and entity.dxf.minor_axis:
+                # minor_axis 是向量，使用模长
                 ry = (entity.dxf.minor_axis[0]**2 + entity.dxf.minor_axis[1]**2)**0.5
             else:
                 ry = 100
@@ -120,8 +123,8 @@ def _entity_bbox(entity) -> Optional[Tuple[float, float, float, float]]:
                     xs = [p[0] for p in ctrl_pts]
                     ys = [p[1] for p in ctrl_pts]
                     return (min(xs), min(ys), max(xs), max(ys))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"SPLINE包围盒计算失败: {e}")
             return None
         elif etype == "SOLID":
             pts = [entity.dxf.get(f"vtx{i}") for i in range(4)
@@ -137,8 +140,8 @@ def _entity_bbox(entity) -> Optional[Tuple[float, float, float, float]]:
                     bbox = entity.get_bbox()
                     if bbox is not None:
                         return (bbox.extmin.x, bbox.extmin.y, bbox.extmax.x, bbox.extmax.y)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"IMAGE包围盒计算失败: {e}")
             ip = entity.dxf.insert
             sz = entity.dxf.u_pixel_size if hasattr(entity.dxf, "u_pixel_size") else 100
             return (ip[0], ip[1], ip[0] + sz, ip[1] + sz)
@@ -149,11 +152,12 @@ def _entity_bbox(entity) -> Optional[Tuple[float, float, float, float]]:
                     xs = [p[0] for p in pts]
                     ys = [p[1] for p in pts]
                     return (min(xs), min(ys), max(xs), max(ys))
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"WIPEOUT包围盒计算失败: {e}")
             return None
         return None
-    except Exception:
+    except Exception as e:
+        logger.debug(f"实体包围盒计算失败: {e}")
         return None
 
 
@@ -186,45 +190,49 @@ def _is_entity_in_frame(entity_bbox: Tuple[float, float, float, float],
     return overlap_x > entity_w * 0.2 and overlap_y > entity_h * 0.2
 
 
-def _copy_layer_defs(source_doc, target_doc):
+def _copy_table_defs(source_doc, target_doc, table_name: str, copy_attrs: bool = False):
+    """通用表格定义复制函数
+    
+    Args:
+        source_doc: 源文档
+        target_doc: 目标文档
+        table_name: 表格名称 ('layers', 'linetypes', 'styles', 'dimstyles')
+        copy_attrs: 是否复制额外属性 (仅 layers 需要 color/linetype)
+    """
     try:
-        for layer in source_doc.layers:
-            if layer.dxf.name not in target_doc.layers:
-                new_layer = target_doc.layers.new(name=layer.dxf.name)
-                try:
-                    new_layer.dxf.color = layer.dxf.color
-                except Exception:
-                    pass
-                try:
-                    new_layer.dxf.linetype = layer.dxf.linetype
-                except Exception:
-                    pass
-    except Exception:
-        pass
+        source_table = getattr(source_doc, table_name)
+        target_table = getattr(target_doc, table_name)
+        
+        for item in source_table:
+            if item.dxf.name not in target_table:
+                new_item = target_table.new(name=item.dxf.name)
+                if copy_attrs and table_name == "layers":
+                    try:
+                        new_item.dxf.color = item.dxf.color
+                    except Exception as e:
+                        logger.debug(f"图层属性复制失败(color): {e}")
+                    try:
+                        new_item.dxf.linetype = item.dxf.linetype
+                    except Exception as e:
+                        logger.debug(f"图层属性复制失败(linetype): {e}")
+    except Exception as e:
+        logger.debug(f"表格定义复制失败: {e}")
+
+
+def _copy_layer_defs(source_doc, target_doc):
+    _copy_table_defs(source_doc, target_doc, "layers", copy_attrs=True)
 
 
 def _copy_linetype_defs(source_doc, target_doc):
-    try:
-        for lt in source_doc.linetypes:
-            if lt.dxf.name not in target_doc.linetypes:
-                try:
-                    target_doc.linetypes.new(name=lt.dxf.name)
-                except Exception:
-                    pass
-    except Exception:
-        pass
+    _copy_table_defs(source_doc, target_doc, "linetypes")
 
 
 def _copy_text_styles(source_doc, target_doc):
-    try:
-        for style in source_doc.styles:
-            if style.dxf.name not in target_doc.styles:
-                try:
-                    target_doc.styles.new(name=style.dxf.name)
-                except Exception:
-                    pass
-    except Exception:
-        pass
+    _copy_table_defs(source_doc, target_doc, "styles")
+
+
+def _copy_dim_styles(source_doc, target_doc):
+    _copy_table_defs(source_doc, target_doc, "dimstyles")
 
 
 def _copy_block_defs(source_doc, target_doc, used_blocks: set):
@@ -244,23 +252,14 @@ def _copy_block_defs(source_doc, target_doc, used_blocks: set):
                             continue
                         tgt_entity = src_entity.copy()
                         tgt_block.add_entity(tgt_entity)
-                    except Exception:
+                    except Exception as e:
+                        logger.debug(f"图块实体复制失败: {e}")
                         continue
-            except Exception:
+            except Exception as e:
+                logger.debug(f"图块定义复制失败: {e}")
                 continue
-    except Exception:
-        pass
-
-
-def _copy_dim_styles(source_doc, target_doc):
-    try:
-        for dimstyle in source_doc.dimstyles:
-            if dimstyle.dxf.name not in target_doc.dimstyles:
-                try:
-                    target_doc.dimstyles.new(name=dimstyle.dxf.name)
-                except Exception:
-                    pass
-    except Exception:
+    except Exception as e:
+        logger.debug(f"图块列表复制失败: {e}")
         pass
 
 
@@ -314,7 +313,8 @@ def split_dxf_by_frames(dxf_path: str, frames: List[Tuple[str, float, float, flo
                         entity_count += 1
                         if etype == "INSERT":
                             used_blocks.add(e.dxf.name)
-                    except Exception:
+                    except Exception as e2:
+                        logger.debug(f"实体复制失败: {e2}")
                         continue
 
             _copy_block_defs(source_doc, target_doc, used_blocks)
@@ -335,8 +335,8 @@ def split_dxf_by_frames(dxf_path: str, frames: List[Tuple[str, float, float, flo
             source_doc.saveas(src_copy)
             results.append(src_copy)
             logger.info(f"无图框可拆，全量复制: {src_copy}")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"全量复制失败: {e}")
 
     return results
 
@@ -347,7 +347,8 @@ def split_single_dxf(dxf_path: str, output_dir: str) -> List[str]:
         doc = ezdxf.readfile(dxf_path)
         doc.saveas(src_copy)
         return [src_copy]
-    except Exception:
+    except Exception as e:
+        logger.warning(f"单文件保存失败: {dxf_path}, {e}")
         return []
 
 
@@ -379,7 +380,8 @@ def split_dxf_by_layouts(dxf_path: str, output_dir: str,
         try:
             layout_names = [l.name for l in source_doc.layouts
                            if l.name not in ("Model", "MODEL")]
-        except Exception:
+        except Exception as e:
+            logger.debug(f"获取布局列表失败: {e}")
             layout_names = []
 
     if not layout_names:
@@ -404,22 +406,53 @@ def split_dxf_by_layouts(dxf_path: str, output_dir: str,
             used_blocks = set()
             entity_count = 0
 
-            source_msp = source_doc.modelspace()
-            for e in source_msp:
-                etype = e.dxftype()
-                if etype not in ENTITY_TYPES_TO_COPY:
-                    continue
-                try:
-                    target_msp.add_entity(copy.deepcopy(e))
-                    entity_count += 1
-                    if etype == "INSERT":
-                        used_blocks.add(e.dxf.name)
-                except Exception:
-                    continue
-
+            # M-28修复：对于多布局文件，只复制布局视口引用的实体
+            # 而不是整个模型空间，避免不同布局内容混在一起
             try:
                 src_layout = source_doc.layouts.get(layout_name)
                 if src_layout is not None:
+                    # 获取布局的视口
+                    viewports = [e for e in src_layout if e.dxftype() == "VIEWPORT"]
+                    if viewports:
+                        # 有视口，只复制视口范围内的模型空间实体
+                        for vp in viewports:
+                            if hasattr(vp.dxf, 'view_center_point') and hasattr(vp.dxf, 'view_height'):
+                                vp_center = vp.dxf.view_center_point
+                                vp_height = vp.dxf.view_height
+                                # 计算视口范围（简化处理）
+                                vp_width = vp_height * (vp.dxf.width / vp.dxf.height) if hasattr(vp.dxf, 'width') and hasattr(vp.dxf, 'height') else vp_height
+                                vp_min_x = vp_center[0] - vp_width / 2
+                                vp_max_x = vp_center[0] + vp_width / 2
+                                vp_min_y = vp_center[1] - vp_height / 2
+                                vp_max_y = vp_center[1] + vp_height / 2
+
+                                # 复制视口范围内的模型空间实体
+                                source_msp = source_doc.modelspace()
+                                for e in source_msp:
+                                    etype = e.dxftype()
+                                    if etype not in ENTITY_TYPES_TO_COPY:
+                                        continue
+                                    try:
+                                        # 简单检查实体是否在视口范围内
+                                        if hasattr(e.dxf, 'insert'):
+                                            ex, ey = e.dxf.insert[0], e.dxf.insert[1]
+                                            if vp_min_x <= ex <= vp_max_x and vp_min_y <= ey <= vp_max_y:
+                                                target_msp.add_entity(copy.deepcopy(e))
+                                                entity_count += 1
+                                                if etype == "INSERT":
+                                                    used_blocks.add(e.dxf.name)
+                                        elif hasattr(e.dxf, 'center'):
+                                            ex, ey = e.dxf.center[0], e.dxf.center[1]
+                                            if vp_min_x <= ex <= vp_max_x and vp_min_y <= ey <= vp_max_y:
+                                                target_msp.add_entity(copy.deepcopy(e))
+                                                entity_count += 1
+                                                if etype == "INSERT":
+                                                    used_blocks.add(e.dxf.name)
+                                    except Exception as e:
+                                        logger.debug(f"视口实体复制失败: {e}")
+                                        continue
+
+                    # 复制布局空间（paper space）的实体
                     tgt_layout = target_doc.layouts.new(layout_name)
                     for e in src_layout:
                         etype = e.dxftype()
@@ -430,10 +463,11 @@ def split_dxf_by_layouts(dxf_path: str, output_dir: str,
                             entity_count += 1
                             if etype == "INSERT":
                                 used_blocks.add(e.dxf.name)
-                        except Exception:
+                        except Exception as e:
+                            logger.debug(f"布局空间实体复制失败: {e}")
                             continue
             except Exception as e:
-                logger.warning(f"布局实体复制警告: {layout_name}: {e}")
+                logger.warning(f"处理布局 {layout_name} 失败: {e}")
 
             _copy_block_defs(source_doc, target_doc, used_blocks)
 

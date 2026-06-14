@@ -145,8 +145,8 @@ def _extract_attribs_from_insert(insert_entity) -> Dict[str, str]:
                     field = ATTRIB_TAG_MAP[tag_clean]
                     result[field] = value_clean
                 result[f"_attrib_{tag_clean}"] = value_clean
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"属性提取失败: {e}")
     return result
 
 
@@ -161,8 +161,8 @@ def _extract_texts_in_region(msp, x_min: float, y_min: float, x_max: float, y_ma
                     e.plain_text() if hasattr(e, "plain_text") else "")
                 if txt and txt.strip():
                     texts.append(txt.strip())
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"文本提取失败: {e}")
     return texts
 
 
@@ -216,7 +216,8 @@ def _extract_from_block_definition(block) -> Dict[str, str]:
                     txt = entity.plain_text() if hasattr(entity, "plain_text") else ""
                     if txt.strip():
                         values.append((ip[0], ip[1], txt.strip()))
-            except Exception:
+            except Exception as e:
+                logger.debug(f"文本值提取失败: {e}")
                 continue
 
         if not labels or not values:
@@ -243,8 +244,8 @@ def _extract_from_block_definition(block) -> Dict[str, str]:
                 if field not in result:
                     result[field] = best_val
 
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"正则匹配失败: {e}")
     return result
 
 
@@ -285,7 +286,8 @@ class TitleBlockExtractor:
                     e.plain_text() if hasattr(e, "plain_text") else "")
                 if txt and txt.strip():
                     texts.append(txt.strip())
-            except Exception:
+            except Exception as e:
+                logger.debug(f"文本提取失败: {e}")
                 continue
         return _apply_field_regex(texts)
 
@@ -435,8 +437,8 @@ class TitleBlockExtractor:
             if detector is not None:
                 try:
                     frames = detector.detect_frames(dxf_path)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"图框检测失败: {dxf_path}, {e}")
             data = self.extract(dxf_path, frames=frames)
             results.append(data)
         return results

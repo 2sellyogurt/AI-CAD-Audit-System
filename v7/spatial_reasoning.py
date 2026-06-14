@@ -229,7 +229,227 @@ class SpatialIndex:
         return candidates
 
 
-class ConflictDeduplicator:
+@dataclass
+class SpatialEntityV2(SpatialEntity):
+    """五级空间实体：扩展楼栋号和构件类型"""
+    building: str = "1"           # 楼栋号
+    component: str = ""           # 构件类型（beam/column/wall/duct/pipe等）
+
+
+class SpatialIndexV2:
+    """五级R-Tree空间索引：楼栋→楼层→专业→构件
+
+    向后兼容旧的两级查询接口（get_entities/query_bbox_overlap等）。
+    新增五级查询接口（query_by_levels）。
+    """
+
+    _NON_SPATIAL = frozenset(["text", "line", "arc"])
+
+    def __init__(self):
+        # 五级嵌套索引: building → floor → discipline → component → rtree
+        self._index: Dict[str, Dict[float, Dict[str, Dict[str, rtree_index.Index]]]] = {}
+        self._entity_map: Dict[int, SpatialEntityV2] = {}
+        self._next_id = 0
+        # 兼容旧接口：两级索引也同步维护
+        self.floor_discipline_idx: Dict[Tuple[float, str], rtree_index.Index] = {}
+        self._entities_by_type: Dict[str, List[SpatialEntityV2]] = {}
+
+    def build(self, entities: List[SpatialEntityV2]):
+        """构建五级索引"""
+        for e in entities:
+            if e.entity_type in self._NON_SPATIAL:
+                continue
+            eid = self._next_id
+            self._next_id += 1
+            self._entity_map[eid] = e
+
+            building = e.building or "1"
+            floor = e.floor_level or 0
+            discipline = e.discipline or "unknown"
+            component = e.component or e.entity_type or "unknown"
+
+            # 五级索引
+            if building not in self._index:
+                self._index[building] = {}
+            b_idx = self._index[building]
+            if floor not in b_idx:
+                b_idx[floor] = {}
+            f_idx = b_idx[floor]
+            if discipline not in f_idx:
+                f_idx[discipline] = {}
+            d_idx = f_idx[discipline]
+            if component not in d_idx:
+                d_idx[component] = rtree_index.Index()
+            d_idx[component].insert(eid, (e.x_min, e.y_min, e.x_max, e.y_max))
+
+            # 兼容旧两级索引
+            key2 = (floor, discipline)
+            if key2 not in self.floor_discipline_idx:
+                self.floor_discipline_idx[key2] = rtree_index.Index()
+            self.floor_discipline_idx[key2].insert(eid, (e.x_min, e.y_min, e.x_max, e.y_max))
+
+            self._entities_by_type.setdefault(e.entity_type, []).append(e)
+
+    def query(self, building: str = None, floor: float = None,
+              discipline: str = None, component: str = None,
+              bbox: Tuple[float, float, float, float] = None) -> List[SpatialEntityV2]:
+        """按任意层级组合查询实体
+
+        Args:
+            building: 楼栋号（如"1"、"A"）
+            floor: 楼层（如3.0表示3层）
+            discipline: 专业（如"structure"、"hvac"）
+            component: 构件类型（如"beam"、"duct"）
+            bbox: 包围盒过滤 (x_min, y_min, x_max, y_max)
+        """
+        # 分四级收集：每级内做并集，级间做交集
+        result_ids = None  # 最终交集结果
+
+        for b_key, b_val in self._index.items():
+            if building and b_key != building:
+                continue
+            b_level_ids = None  # building 级并集
+            for f_key, f_val in b_val.items():
+                if floor is not None and f_key != floor:
+                    continue
+                f_level_ids = None  # floor 级并集
+                for d_key, d_val in f_val.items():
+                    if discipline and d_key != discipline:
+                        continue
+                    d_level_ids = None  # discipline 级并集
+                    for c_key, c_idx in d_val.items():
+                        if component and c_key != component:
+                            continue
+                        if bbox:
+                            ids = set(c_idx.intersection(bbox, objects=False))
+                        else:
+                            ids = set(c_idx.intersection(c_idx.bounds, objects=False))
+                        if d_level_ids is None:
+                            d_level_ids = ids
+                        else:
+                            d_level_ids |= ids  # component 级并集
+                    if d_level_ids is not None:
+                        if f_level_ids is None:
+                            f_level_ids = d_level_ids
+                        else:
+                            f_level_ids |= f_level_ids | d_level_ids  # discipline 级并集
+                if f_level_ids is not None:
+                    if b_level_ids is None:
+                        b_level_ids = f_level_ids
+                    else:
+                        b_level_ids |= b_level_ids | f_level_ids  # floor 级并集
+            if b_level_ids is not None:
+                if result_ids is None:
+                    result_ids = b_level_ids
+                else:
+                    result_ids &= b_level_ids  # building 级交集
+
+        if not result_ids:
+            return []
+        return [self._entity_map[eid] for eid in result_ids if eid in self._entity_map]
+
+    def get_entities_by_type(self, entity_type: str) -> List[SpatialEntityV2]:
+        return self._entities_by_type.get(entity_type, [])
+
+    # ── 向后兼容旧接口 ──
+
+    def get_entities(self, floor_id: float, discipline: str) -> List[SpatialEntityV2]:
+        """兼容旧接口：按楼层+专业查询"""
+        return self.query(floor=floor_id, discipline=discipline)
+
+    def query_bbox_overlap(self, floor_id: float, disc_a: str, disc_b: str) -> List[Tuple[SpatialEntityV2, SpatialEntityV2]]:
+        """兼容旧接口：BBOX重叠查询"""
+        candidates = []
+        idx_a = self.floor_discipline_idx.get((floor_id, disc_a))
+        idx_b = self.floor_discipline_idx.get((floor_id, disc_b))
+        if not idx_a or not idx_b:
+            return candidates
+        seen = set()
+        for eid_a in idx_a.intersection(idx_a.bounds, objects=False):
+            ent_a = self._entity_map.get(eid_a)
+            if not ent_a:
+                continue
+            for eid_b in idx_b.intersection((ent_a.x_min, ent_a.y_min, ent_a.x_max, ent_a.y_max), objects=False):
+                if eid_a == eid_b:
+                    continue
+                ent_b = self._entity_map.get(eid_b)
+                if not ent_b or ent_a.drawing_name == ent_b.drawing_name:
+                    continue
+                pair_key = (min(eid_a, eid_b), max(eid_a, eid_b))
+                if pair_key in seen:
+                    continue
+                seen.add(pair_key)
+                candidates.append((ent_a, ent_b))
+        return candidates
+
+    def query_cross_candidates(self, floor_id: float, source_disc: str,
+                                target_discs: List[str]) -> List[Tuple[SpatialEntityV2, SpatialEntityV2]]:
+        """兼容旧接口：跨专业碰撞候选"""
+        candidates = []
+        src_idx = self.floor_discipline_idx.get((floor_id, source_disc))
+        if not src_idx:
+            return candidates
+        for target_disc in target_discs:
+            tgt_idx = self.floor_discipline_idx.get((floor_id, target_disc))
+            if not tgt_idx:
+                continue
+            for src_eid in src_idx.intersection(src_idx.bounds, objects=False):
+                src_bbox = src_idx.bounds(src_eid)
+                hits = list(tgt_idx.intersection(src_bbox, objects=False))
+                for tgt_eid in hits[:500]:
+                    se = self._entity_map.get(src_eid)
+                    te = self._entity_map.get(tgt_eid)
+                    if se and te and se.drawing_name != te.drawing_name:
+                        candidates.append((se, te))
+        return candidates
+
+    def get_buildings(self) -> List[str]:
+        """获取所有楼栋号"""
+        return list(self._index.keys())
+
+    def get_floors(self, building: str = None) -> List[float]:
+        """获取所有楼层"""
+        floors = set()
+        for b_key, b_val in self._index.items():
+            if building and b_key != building:
+                continue
+            floors.update(b_val.keys())
+        return sorted(floors)
+
+    def get_disciplines(self, building: str = None, floor: float = None) -> List[str]:
+        """获取所有专业"""
+        discs = set()
+        for b_key, b_val in self._index.items():
+            if building and b_key != building:
+                continue
+            for f_key, f_val in b_val.items():
+                if floor is not None and f_key != floor:
+                    continue
+                discs.update(f_val.keys())
+        return sorted(discs)
+
+    def get_components(self, building: str = None, floor: float = None,
+                       discipline: str = None) -> List[str]:
+        """获取所有构件类型"""
+        comps = set()
+        for b_key, b_val in self._index.items():
+            if building and b_key != building:
+                continue
+            for f_key, f_val in b_val.items():
+                if floor is not None and f_key != floor:
+                    continue
+                for d_key, d_val in f_val.items():
+                    if discipline and d_key != discipline:
+                        continue
+                    comps.update(d_val.keys())
+        return sorted(comps)
+
+    @property
+    def entity_count(self) -> int:
+        return len(self._entity_map)
+
+
+class ConflictClusterer:
     """DBSCAN空间聚类：实体对冲突 → 物理冲突簇"""
     def __init__(self, spatial_tolerance: float = 500.0):
         self.tol = spatial_tolerance
@@ -295,11 +515,11 @@ class SpatialAnalyzer:
 
     def __init__(self, dxf_dir: str):
         self.dxf_dir = dxf_dir
-        self.entities: List[SpatialEntity] = []
+        self.entities: List[SpatialEntityV2] = []  # 使用V2实体
         self.floor_labels: List[FloorLabel] = []
         self.elevation_tags: List[ElevationTag] = []
         self.drawings: Dict[str, str] = {}
-        self.spatial_index: Optional[SpatialIndex] = None
+        self.spatial_index: Optional[SpatialIndexV2] = None  # 使用V2索引
         self._cache_dir = os.path.realpath(
             os.path.join(os.path.dirname(dxf_dir) if dxf_dir else ".", ".dxf_cache")
         )
@@ -316,9 +536,18 @@ class SpatialAnalyzer:
         """公开的缓存目录路径。"""
         return self._cache_dir
 
-    def _classify_entity(self, et: str, dxf_entity, discipline: str, name: str) -> Optional[SpatialEntity]:
+    def _classify_entity(self, et: str, dxf_entity, discipline: str, name: str,
+                         semantic_label=None) -> Optional[SpatialEntityV2]:
+        """分类实体（支持VLM语义标签注入）
+
+        Args:
+            semantic_label: VLM语义标签（可选），用于补充building/component信息
+        """
         layer = dxf_entity.dxf.layer if hasattr(dxf_entity.dxf, 'layer') else ""
         layer_lower = layer.lower()
+
+        # 从语义标签获取楼栋号
+        building = semantic_label.building if semantic_label else "1"
 
         if et == "LINE":
             x1, y1 = dxf_entity.dxf.start[0], dxf_entity.dxf.start[1]
@@ -352,9 +581,21 @@ class SpatialAnalyzer:
                     etype = "line"
                 else:
                     etype = "beam" if length > 2000 else "line"
-            return SpatialEntity(
+
+            # 从语义标签获取构件类型（如果层名映射失败）
+            component = etype
+            if semantic_label and semantic_label.components:
+                # 如果VLM识别出构件类型，优先使用
+                if etype in semantic_label.components:
+                    component = etype
+                elif len(semantic_label.components) == 1:
+                    # 如果VLM只识别出一种构件类型，使用该类型
+                    component = semantic_label.components[0]
+
+            return SpatialEntityV2(
                 entity_type=etype, discipline=discipline, drawing_name=name, layer=layer,
-                x_min=min(x1, x2), y_min=min(y1, y2), x_max=max(x1, x2), y_max=max(y1, y2))
+                x_min=min(x1, x2), y_min=min(y1, y2), x_max=max(x1, x2), y_max=max(y1, y2),
+                building=building, component=component)
 
         elif et == "LWPOLYLINE":
             pts = list(dxf_entity.get_points())
@@ -366,51 +607,75 @@ class SpatialAnalyzer:
             h = max(ys) - min(ys)
 
             if any(k in layer_lower for k in ('airduct', '风管', '送风', '排风', '排烟', '回风', '新风', 'cuch-air')):
-                return SpatialEntity(entity_type="duct", discipline=discipline, drawing_name=name, layer=layer,
-                                     x_min=min(xs), y_min=min(ys), x_max=max(xs), y_max=max(ys))
+                return SpatialEntityV2(entity_type="duct", discipline=discipline, drawing_name=name, layer=layer,
+                                     x_min=min(xs), y_min=min(ys), x_max=max(xs), y_max=max(ys),
+                                     building=building, component="duct")
             if any(k in layer_lower for k in ('pipe', '管', 'water', '给水', '排水', '消防', '喷淋', '雨水', '污水', 'cuch-pipe')):
-                return SpatialEntity(entity_type="pipe", discipline=discipline, drawing_name=name, layer=layer,
-                                     x_min=min(xs), y_min=min(ys), x_max=max(xs), y_max=max(ys))
+                return SpatialEntityV2(entity_type="pipe", discipline=discipline, drawing_name=name, layer=layer,
+                                     x_min=min(xs), y_min=min(ys), x_max=max(xs), y_max=max(ys),
+                                     building=building, component="pipe")
             if w < 2000 and h < 2000 and w > 50 and h > 50:
-                return SpatialEntity(entity_type="column", discipline=discipline, drawing_name=name, layer=layer,
-                                     x_min=min(xs), y_min=min(ys), x_max=max(xs), y_max=max(ys))
-            return SpatialEntity(
-                entity_type="wall" if discipline == "building" else "structure_member",
-                discipline=discipline, drawing_name=name, layer=layer,
-                x_min=min(xs), y_min=min(ys), x_max=max(xs), y_max=max(ys))
+                return SpatialEntityV2(entity_type="column", discipline=discipline, drawing_name=name, layer=layer,
+                                     x_min=min(xs), y_min=min(ys), x_max=max(xs), y_max=max(ys),
+                                     building=building, component="column")
+
+            etype = "wall" if discipline == "building" else "structure_member"
+            component = etype
+            if semantic_label and semantic_label.components:
+                if etype in semantic_label.components:
+                    component = etype
+                elif len(semantic_label.components) == 1:
+                    component = semantic_label.components[0]
+
+            return SpatialEntityV2(
+                entity_type=etype, discipline=discipline, drawing_name=name, layer=layer,
+                x_min=min(xs), y_min=min(ys), x_max=max(xs), y_max=max(ys),
+                building=building, component=component)
 
         elif et == "TEXT" or et == "MTEXT":
             try:
                 txt = dxf_entity.plain_text() if hasattr(dxf_entity, 'plain_text') else (
                     dxf_entity.dxf.text if et == "TEXT" else dxf_entity.text)
-            except Exception:
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).debug(f"文本提取失败: {e}")
                 txt = dxf_entity.dxf.text if et == "TEXT" else ""
             if not txt or not txt.strip():
                 return None
             ip = dxf_entity.dxf.insert
-            return SpatialEntity(entity_type="text", discipline=discipline, drawing_name=name,
+            return SpatialEntityV2(entity_type="text", discipline=discipline, drawing_name=name,
                                  x_min=ip[0], y_min=ip[1], x_max=ip[0], y_max=ip[1],
-                                 text_content=txt.strip()[:200])
+                                 text_content=txt.strip()[:200], building=building, component="text")
 
         elif et == "CIRCLE":
             cx, cy, r = dxf_entity.dxf.center[0], dxf_entity.dxf.center[1], dxf_entity.dxf.radius
             if r < 10 or r > 5000:
                 return None
             if any(k in layer_lower for k in ('pipe', '管', 'duct', '风管', 'water')):
-                return SpatialEntity(entity_type="pipe", discipline=discipline, drawing_name=name,
-                                     x_min=cx-r, y_min=cy-r, x_max=cx+r, y_max=cy+r)
-            return SpatialEntity(entity_type="column" if r < 600 else "opening",
-                                 discipline=discipline, drawing_name=name,
-                                 x_min=cx-r, y_min=cy-r, x_max=cx+r, y_max=cy+r)
+                return SpatialEntityV2(entity_type="pipe", discipline=discipline, drawing_name=name,
+                                     x_min=cx-r, y_min=cy-r, x_max=cx+r, y_max=cy+r,
+                                     building=building, component="pipe")
+            etype = "column" if r < 600 else "opening"
+            return SpatialEntityV2(entity_type=etype, discipline=discipline, drawing_name=name,
+                                 x_min=cx-r, y_min=cy-r, x_max=cx+r, y_max=cy+r,
+                                 building=building, component=etype)
 
         elif et == "ARC":
             cx, cy, r = dxf_entity.dxf.center[0], dxf_entity.dxf.center[1], dxf_entity.dxf.radius
-            return SpatialEntity(entity_type="arc", discipline=discipline, drawing_name=name, layer=layer,
-                                 x_min=cx-r, y_min=cy-r, x_max=cx+r, y_max=cy+r)
+            return SpatialEntityV2(entity_type="arc", discipline=discipline, drawing_name=name, layer=layer,
+                                 x_min=cx-r, y_min=cy-r, x_max=cx+r, y_max=cy+r,
+                                 building=building, component="arc")
 
         return None
 
-    def extract_from_dxf(self, dxf_path: str, discipline: str):
+    def extract_from_dxf(self, dxf_path: str, discipline: str, semantic_label=None):
+        """从DXF提取实体（支持VLM语义标签注入）
+
+        Args:
+            dxf_path: DXF文件路径
+            discipline: 专业类型
+            semantic_label: VLM语义标签（可选），包含楼栋号/构件类型等信息
+        """
         name = os.path.basename(dxf_path).replace(".dxf", "")
         try:
             doc = ezdxf.readfile(dxf_path)
@@ -429,7 +694,8 @@ class SpatialAnalyzer:
                     try:
                         txt = e.plain_text() if hasattr(e, 'plain_text') else (
                             e.dxf.text if et == "TEXT" else e.text)
-                    except Exception:
+                    except Exception as e:
+                        logger.debug(f"文本提取失败: {e}")
                         txt = ""
                     if not txt or not txt.strip():
                         continue
@@ -447,17 +713,36 @@ class SpatialAnalyzer:
                         self.elevation_tags.append(ElevationTag(
                             x=ip[0], y=ip[1], elevation=elev, text=txt[:60], drawing_name=name))
 
-                entity = self._classify_entity(et, e, discipline, name)
+                entity = self._classify_entity(et, e, discipline, name, semantic_label)
                 if entity:
+                    # 如果语义标签提供了楼层，且实体未分配楼层，使用语义楼层
+                    if semantic_label and semantic_label.floor is not None:
+                        if entity.floor_level is None:
+                            entity.floor_level = float(semantic_label.floor)
                     self.entities.append(entity)
             except Exception as exc:
                 self._logger.warning(f"实体处理异常: {name} type={e.dxftype() if hasattr(e,'dxftype') else '?'} err={exc}")
 
-    def extract_all(self):
+    def extract_all(self, use_vlm: bool = True):
+        """提取所有DXF实体（支持VLM语义增强）
+
+        Args:
+            use_vlm: 是否启用VLM语义提取（默认True，无VLM时自动降级）
+        """
         dxfs = sorted(glob.glob(os.path.join(self.dxf_dir, "*.dxf")), key=os.path.getsize)
 
         from v7.preprocessor.drawing_extractor import DrawingExtractor
         ext = DrawingExtractor()
+
+        # VLM语义提取器（可选）
+        vlm_extractor = None
+        if use_vlm:
+            try:
+                from v7.preprocessor.vlm_semantic_extractor import VLMSemanticExtractor
+                vlm_extractor = VLMSemanticExtractor()
+                self._logger.info("VLM语义提取器已启用")
+            except ImportError:
+                self._logger.info("VLM语义提取器不可用，使用纯正则模式")
 
         HVAC_PREFIXES = {"h-", "h_", "nt-", "nt_", "暖通", "hvac", "air", "duct", "xr-a", "xr_"}
         STRUCT_PREFIXES = {"s-", "s_", "结施", "结构", "基础", "配筋", "桩基", "预制", "埋件", "g-", "g_"}
@@ -494,7 +779,12 @@ class SpatialAnalyzer:
                     with open(cache_file, "r", encoding="utf-8") as cf:
                         cache_data = json.load(cf)
                     for e_data in cache_data.get("entities", []):
-                        self.entities.append(SpatialEntity(**e_data))
+                        # 兼容旧缓存（无building/component字段）
+                        if "building" not in e_data:
+                            e_data["building"] = "1"
+                        if "component" not in e_data:
+                            e_data["component"] = e_data.get("entity_type", "unknown")
+                        self.entities.append(SpatialEntityV2(**e_data))
                     for fl_data in cache_data.get("floor_labels", []):
                         self.floor_labels.append(FloorLabel(**fl_data))
                     for et_data in cache_data.get("elevation_tags", []):
@@ -505,17 +795,39 @@ class SpatialAnalyzer:
 
             if not cached:
                 discipline = classify_enhanced(name)
+
+                # VLM语义提取（每图纸一次调用）
+                semantic_label = None
+                if vlm_extractor:
+                    # 查找对应的PNG图片
+                    png_path = dxf.rsplit(".", 1)[0] + ".png"
+                    if not os.path.exists(png_path):
+                        png_path = None
+                    # 提取DXF层名用于互补映射
+                    dxf_layers = None
+                    try:
+                        doc_tmp = ezdxf.readfile(dxf)
+                        dxf_layers = [layer.dxf.name for layer in doc_tmp.layers]
+                    except Exception as e:
+                        logger.debug(f"读取DXF图层失败: {dxf}, {e}")
+                    semantic_label = vlm_extractor.extract_all(
+                        image_path=png_path or "",
+                        drawing_name=name,
+                        dxf_layers=dxf_layers
+                    )
+
                 before = len(self.entities)
                 before_fl = len(self.floor_labels)
                 before_et = len(self.elevation_tags)
-                self.extract_from_dxf(dxf, discipline)
+                self.extract_from_dxf(dxf, discipline, semantic_label)
                 cache_data = {
                     "entities": [{"entity_type": e.entity_type, "discipline": e.discipline,
                                   "drawing_name": e.drawing_name, "layer": e.layer,
                                   "x_min": e.x_min, "y_min": e.y_min, "x_max": e.x_max,
                                   "y_max": e.y_max, "floor_level": e.floor_level,
                                   "z_bottom": e.z_bottom, "z_top": e.z_top,
-                                  "text_content": e.text_content}
+                                  "text_content": e.text_content,
+                                  "building": e.building, "component": e.component}
                                  for e in self.entities[before:]],
                     "floor_labels": [{"x": fl.x, "y": fl.y, "floor": fl.floor, "text": fl.text,
                                       "drawing_name": fl.drawing_name} for fl in self.floor_labels[before_fl:]],
@@ -531,7 +843,8 @@ class SpatialAnalyzer:
                     self._logger.warning(f"缓存保存失败: {cache_file} err={e}")
         self._assign_floor_levels()
 
-        self.spatial_index = SpatialIndex()
+        # 使用五级空间索引（向后兼容旧接口）
+        self.spatial_index = SpatialIndexV2()
         self.spatial_index.build(self.entities)
 
         return len(self.entities)
@@ -611,14 +924,14 @@ class SpatialAnalyzer:
         if assigned > 0 or skipped_text > 0:
             self._logger.info(f"楼层关联: {assigned}个实体已分配楼层, {no_floor}个未分配, {skipped_text}个text已跳过")
 
-    def _same_floor(self, e1: SpatialEntity, e2: SpatialEntity) -> bool:
+    def _same_floor(self, e1: SpatialEntityV2, e2: SpatialEntityV2) -> bool:
         if e1.floor_level is None or e2.floor_level is None:
             return True
         return abs(e1.floor_level - e2.floor_level) < 0.5
 
     def find_cross_floor_conflicts(self) -> List[Dict]:
         if self.spatial_index is None:
-            self.spatial_index = SpatialIndex()
+            self.spatial_index = SpatialIndexV2()
             self.spatial_index.build(self.entities)
 
         conflicts = []
@@ -658,7 +971,8 @@ class SpatialAnalyzer:
 
         return conflicts
 
-    def _detect_beam_duct_rtree(self, si: SpatialIndex, fl_id: float) -> List[Dict]:
+    def _detect_beam_duct_rtree(self, si: SpatialIndexV2, fl_id: float) -> List[Dict]:
+        """检测梁与风管叠合（rtree版本）"""
         conflicts = []
         beam_keys = [(fl_id, d) for d in ("structure", "building")]
         pairs = []
@@ -680,21 +994,27 @@ class SpatialAnalyzer:
             if key in seen:
                 continue
             seen.add(key)
-            cx = (max(b.x_min, d.x_min) + min(b.x_max, d.x_max)) / 2
-            cy = (max(b.y_min, d.y_min) + min(b.y_max, d.y_max)) / 2
-            axis = self._coord_to_axis(cx, cy)
-            fl_info = f"，位于{floor_label(b.floor_level)}区域" if b.floor_level and b.floor_level > 0 else ""
-            conflicts.append({
-                "type": "beam_duct_overlap", "severity": "B",
-                "description": f"结构梁（来自{b.drawing_name[:25]}）与风管（来自{d.drawing_name[:25]}）在{axis}区域存在{int(xo)}mm×{int(yo)}mm平面投影叠合{fl_info}",
-                "risk": "梁与风管平面叠合，若需穿梁则破坏结构承载力。需结构专业确认梁预留洞位置及补强方案，或调整风管路由",
-                "involved": f"结构梁图:{b.drawing_name[:30]} | 风管图:{d.drawing_name[:30]}",
-                "std": "GB50010-2010 9.2.14（梁开洞限制）；GB51251-2017 4.4.8（排烟风管耐火要求）",
-                "floor": b.floor_level
-            })
+            # 共享逻辑：构建冲突描述
+            conflicts.append(self._build_beam_duct_conflict(b, d, xo, yo))
         return conflicts
 
-    def _detect_beam_pipe_rtree(self, si: SpatialIndex, fl_id: float) -> List[Dict]:
+    def _build_beam_duct_conflict(self, b, d, xo, yo) -> Dict:
+        """构建梁-风管冲突描述（共享逻辑）"""
+        cx = (max(b.x_min, d.x_min) + min(b.x_max, d.x_max)) / 2
+        cy = (max(b.y_min, d.y_min) + min(b.y_max, d.y_max)) / 2
+        axis = self._coord_to_axis(cx, cy)
+        fl_info = f"，位于{floor_label(b.floor_level)}区域" if b.floor_level and b.floor_level > 0 else ""
+        return {
+            "type": "beam_duct_overlap", "severity": "B",
+            "description": f"结构梁（来自{b.drawing_name[:25]}）与风管（来自{d.drawing_name[:25]}）在{axis}区域存在{int(xo)}mm×{int(yo)}mm平面投影叠合{fl_info}",
+            "risk": "梁与风管平面叠合，若需穿梁则破坏结构承载力。需结构专业确认梁预留洞位置及补强方案，或调整风管路由",
+            "involved": f"结构梁图:{b.drawing_name[:30]} | 风管图:{d.drawing_name[:30]}",
+            "std": "GB50010-2010 9.2.14（梁开洞限制）；GB51251-2017 4.4.8（排烟风管耐火要求）",
+            "floor": b.floor_level
+        }
+
+    def _detect_beam_pipe_rtree(self, si: SpatialIndexV2, fl_id: float) -> List[Dict]:
+        """检测梁与管线叠合（rtree版本）"""
         conflicts = []
         pairs = si.query_bbox_overlap(fl_id, "structure", "plumbing")
         seen = set()
@@ -709,21 +1029,27 @@ class SpatialAnalyzer:
             if key in seen:
                 continue
             seen.add(key)
-            cx = (max(b.x_min, p.x_min) + min(b.x_max, p.x_max)) / 2
-            cy = (max(b.y_min, p.y_min) + min(b.y_max, p.y_max)) / 2
-            axis = self._coord_to_axis(cx, cy)
-            fl_info = f"，位于{floor_label(b.floor_level)}区域" if b.floor_level and b.floor_level > 0 else ""
-            conflicts.append({
-                "type": "beam_pipe_overlap", "severity": "B",
-                "description": f"结构梁（来自{b.drawing_name[:25]}）与给排水管线（来自{p.drawing_name[:25]}）在{axis}区域存在{int(xo)}mm×{int(yo)}mm平面叠合{fl_info}",
-                "risk": "管线与梁平面叠合，需确认标高关系，避免管线穿梁",
-                "involved": f"梁图:{b.drawing_name[:30]} | 管线图:{p.drawing_name[:30]}",
-                "std": "GB50010-2010 9.2.14（梁开洞限制）",
-                "floor": b.floor_level
-            })
+            # 共享逻辑：构建冲突描述
+            conflicts.append(self._build_beam_pipe_conflict(b, p, xo, yo))
         return conflicts
 
-    def _detect_column_pipe_rtree(self, si: SpatialIndex, fl_id: float) -> List[Dict]:
+    def _build_beam_pipe_conflict(self, b, p, xo, yo) -> Dict:
+        """构建梁-管线冲突描述（共享逻辑）"""
+        cx = (max(b.x_min, p.x_min) + min(b.x_max, p.x_max)) / 2
+        cy = (max(b.y_min, p.y_min) + min(b.y_max, p.y_max)) / 2
+        axis = self._coord_to_axis(cx, cy)
+        fl_info = f"，位于{floor_label(b.floor_level)}区域" if b.floor_level and b.floor_level > 0 else ""
+        return {
+            "type": "beam_pipe_overlap", "severity": "B",
+            "description": f"结构梁（来自{b.drawing_name[:25]}）与给排水管线（来自{p.drawing_name[:25]}）在{axis}区域存在{int(xo)}mm×{int(yo)}mm平面叠合{fl_info}",
+            "risk": "管线与梁平面叠合，需确认标高关系，避免管线穿梁",
+            "involved": f"梁图:{b.drawing_name[:30]} | 管线图:{p.drawing_name[:30]}",
+            "std": "GB50010-2010 9.2.14（梁开洞限制）",
+            "floor": b.floor_level
+        }
+
+    def _detect_column_pipe_rtree(self, si: SpatialIndexV2, fl_id: float) -> List[Dict]:
+        """检测柱与管线穿越（rtree版本）"""
         conflicts = []
         for disc in ("hvac", "plumbing"):
             pairs = si.query_bbox_overlap(fl_id, "building", disc)
@@ -741,21 +1067,27 @@ class SpatialAnalyzer:
                 if key in seen:
                     continue
                 seen.add(key)
-                cx = (c.x_min + c.x_max) / 2
-                cy = (c.y_min + c.y_max) / 2
-                axis = self._coord_to_axis(cx, cy)
-                dp_type = "风管" if dp.entity_type == "duct" else "管线"
-                conflicts.append({
-                    "type": "column_pipe_conflict", "severity": "B",
-                    "description": f"柱（来自{c.drawing_name[:25]}）与{dp_type}（来自{dp.drawing_name[:25]}）在{axis}区域存在穿越",
-                    "risk": "管线穿越柱子将破坏结构，需重新规划管线路径或柱预留套管",
-                    "involved": f"柱图:{c.drawing_name[:30]} | {dp_type}图:{dp.drawing_name[:30]}",
-                    "std": "GB50010-2010 6.4.12（柱开洞限制）",
-                    "floor": c.floor_level
-                })
+                # 共享逻辑：构建冲突描述
+                conflicts.append(self._build_column_pipe_conflict(c, dp))
         return conflicts
 
-    def _detect_pipe_crossing_rtree(self, si: SpatialIndex, fl_id: float) -> List[Dict]:
+    def _build_column_pipe_conflict(self, c, dp) -> Dict:
+        """构建柱-管线冲突描述（共享逻辑）"""
+        cx = (c.x_min + c.x_max) / 2
+        cy = (c.y_min + c.y_max) / 2
+        axis = self._coord_to_axis(cx, cy)
+        dp_type = "风管" if dp.entity_type == "duct" else "管线"
+        return {
+            "type": "column_pipe_conflict", "severity": "B",
+            "description": f"柱（来自{c.drawing_name[:25]}）与{dp_type}（来自{dp.drawing_name[:25]}）在{axis}区域存在穿越",
+            "risk": "管线穿越柱子将破坏结构，需重新规划管线路径或柱预留套管",
+            "involved": f"柱图:{c.drawing_name[:30]} | {dp_type}图:{dp.drawing_name[:30]}",
+            "std": "GB50010-2010 6.4.12（柱开洞限制）",
+            "floor": c.floor_level
+        }
+
+    def _detect_pipe_crossing_rtree(self, si: SpatialIndexV2, fl_id: float) -> List[Dict]:
+        """检测风管与管线交叉（rtree版本）"""
         conflicts = []
         pairs = si.query_bbox_overlap(fl_id, "hvac", "plumbing")
         seen = set()
@@ -770,21 +1102,27 @@ class SpatialAnalyzer:
             if key in seen:
                 continue
             seen.add(key)
-            cx = (max(duct.x_min, pipe.x_min) + min(duct.x_max, pipe.x_max)) / 2
-            cy = (max(duct.y_min, pipe.y_min) + min(duct.y_max, pipe.y_max)) / 2
-            axis = self._coord_to_axis(cx, cy)
-            fl_info = f"，{floor_label(duct.floor_level)}" if duct.floor_level is not None else ""
-            conflicts.append({
-                "type": "pipe_crossing", "severity": "B",
-                "description": f"风管（来自{duct.drawing_name[:25]}）与给排水管线（来自{pipe.drawing_name[:25]}）在{axis}区域{fl_info}存在交叉",
-                "risk": "风管与给排水管交叉需协调标高，风管优先在上方，排水管需保证坡度",
-                "involved": f"风管图:{duct.drawing_name[:30]} | 给排水图:{pipe.drawing_name[:30]}",
-                "std": "GB50015-2019 4.4.2（排水管坡度）；GB50242-2002 3.3.3（管线综合排布）",
-                "floor": duct.floor_level
-            })
+            # 共享逻辑：构建冲突描述
+            conflicts.append(self._build_pipe_crossing_conflict(duct, pipe))
         return conflicts
 
-    def _detect_duct_wall_rtree(self, si: SpatialIndex, fl_id: float) -> List[Dict]:
+    def _build_pipe_crossing_conflict(self, duct, pipe) -> Dict:
+        """构建风管-管线交叉冲突描述（共享逻辑）"""
+        cx = (max(duct.x_min, pipe.x_min) + min(duct.x_max, pipe.x_max)) / 2
+        cy = (max(duct.y_min, pipe.y_min) + min(duct.y_max, pipe.y_max)) / 2
+        axis = self._coord_to_axis(cx, cy)
+        fl_info = f"，{floor_label(duct.floor_level)}" if duct.floor_level is not None else ""
+        return {
+            "type": "pipe_crossing", "severity": "B",
+            "description": f"风管（来自{duct.drawing_name[:25]}）与给排水管线（来自{pipe.drawing_name[:25]}）在{axis}区域{fl_info}存在交叉",
+            "risk": "风管与给排水管交叉需协调标高，风管优先在上方，排水管需保证坡度",
+            "involved": f"风管图:{duct.drawing_name[:30]} | 给排水图:{pipe.drawing_name[:30]}",
+            "std": "GB50015-2019 4.4.2（排水管坡度）；GB50242-2002 3.3.3（管线综合排布）",
+            "floor": duct.floor_level
+        }
+
+    def _detect_duct_wall_rtree(self, si: SpatialIndexV2, fl_id: float) -> List[Dict]:
+        """检测风管穿墙（rtree版本）"""
         conflicts = []
         pairs = si.query_bbox_overlap(fl_id, "building", "hvac")
         seen = set()
@@ -799,21 +1137,27 @@ class SpatialAnalyzer:
             if key in seen:
                 continue
             seen.add(key)
-            cx = (max(w.x_min, d.x_min) + min(w.x_max, d.x_max)) / 2
-            cy = (max(w.y_min, d.y_min) + min(w.y_max, d.y_max)) / 2
-            axis = self._coord_to_axis(cx, cy)
-            fl_info = f"，{floor_label(w.floor_level)}" if w.floor_level is not None else ""
-            conflicts.append({
-                "type": "duct_through_wall", "severity": "B",
-                "description": f"风管/管线（来自{d.drawing_name[:25]}）与墙体（来自{w.drawing_name[:25]}）在{axis}区域{fl_info}存在穿墙交叉",
-                "risk": "风管穿墙需预留套管并做防火封堵，未预留将导致后期开洞破坏墙体",
-                "involved": f"墙体:{w.drawing_name[:30]} | 风管:{d.drawing_name[:30]}",
-                "std": "GB50016-2014 6.3.5（防火封堵）；GB50243-2016 6.2.7（风管穿墙要求）",
-                "floor": w.floor_level
-            })
+            # 共享逻辑：构建冲突描述
+            conflicts.append(self._build_duct_wall_conflict(w, d))
         return conflicts
 
+    def _build_duct_wall_conflict(self, w, d) -> Dict:
+        """构建风管-墙体冲突描述（共享逻辑）"""
+        cx = (max(w.x_min, d.x_min) + min(w.x_max, d.x_max)) / 2
+        cy = (max(w.y_min, d.y_min) + min(w.y_max, d.y_max)) / 2
+        axis = self._coord_to_axis(cx, cy)
+        fl_info = f"，{floor_label(w.floor_level)}" if w.floor_level is not None else ""
+        return {
+            "type": "duct_through_wall", "severity": "B",
+            "description": f"风管/管线（来自{d.drawing_name[:25]}）与墙体（来自{w.drawing_name[:25]}）在{axis}区域{fl_info}存在穿墙交叉",
+            "risk": "风管穿墙需预留套管并做防火封堵，未预留将导致后期开洞破坏墙体",
+            "involved": f"墙体:{w.drawing_name[:30]} | 风管:{d.drawing_name[:30]}",
+            "std": "GB50016-2014 6.3.5（防火封堵）；GB50243-2016 6.2.7（风管穿墙要求）",
+            "floor": w.floor_level
+        }
+
     def _detect_beam_duct_overlap(self, beams, ducts_or_pipes, label="duct") -> List[Dict]:
+        """检测梁与风管/管线叠合（非rtree版本）"""
         conflicts = []
         entity_label = "风管" if label == "duct" else "给排水管线"
         entity_label2 = "排烟风管" if label == "duct" else "管线"
@@ -852,6 +1196,7 @@ class SpatialAnalyzer:
         return conflicts
 
     def _detect_duct_through_wall(self, ducts, walls) -> List[Dict]:
+        """检测风管穿墙（非rtree版本）"""
         conflicts = []
         count = 0
         for w in walls[:300]:
@@ -867,26 +1212,14 @@ class SpatialAnalyzer:
                 if x_overlap > 200 and y_overlap > 200:
                     count += 1
                     if count <= 5:
-                        cx = (max(w.x_min, d.x_min) + min(w.x_max, d.x_max)) / 2
-                        cy = (max(w.y_min, d.y_min) + min(w.y_max, d.y_max)) / 2
-                        axis = self._coord_to_axis(cx, cy)
-                        floor_info = ""
-                        if w.floor_level is not None:
-                            floor_info = f"，{floor_label(w.floor_level)}"
-                        conflicts.append({
-                            "type": "duct_through_wall",
-                            "severity": "B",
-                            "description": f"风管/管线（来自{d.drawing_name[:25]}）与墙体（来自{w.drawing_name[:25]}）在{axis}区域{floor_info}存在穿墙交叉",
-                            "risk": "风管穿墙需预留套管并做防火封堵，未预留将导致后期开洞破坏墙体",
-                            "involved": f"墙体:{w.drawing_name[:30]} | 风管:{d.drawing_name[:30]}",
-                            "std": "GB50016-2014 6.3.5（防火封堵）；GB50243-2016 6.2.7（风管穿墙要求）",
-                            "floor": w.floor_level
-                        })
+                        # 共享逻辑：构建冲突描述
+                        conflicts.append(self._build_duct_wall_conflict(w, d))
         if count > 0:
             self._logger.info(f"风管穿墙: {count}个（已过滤跨楼层假冲突）")
         return conflicts
 
     def _detect_column_pipe_conflict(self, columns, ducts_or_pipes) -> List[Dict]:
+        """检测柱与管线穿越（非rtree版本）"""
         conflicts = []
         count = 0
         for col in columns[:300]:
@@ -902,19 +1235,8 @@ class SpatialAnalyzer:
                 if x_overlap > 100 and y_overlap > 100:
                     count += 1
                     if count <= 5:
-                        cx = (col.x_min + col.x_max) / 2
-                        cy = (col.y_min + col.y_max) / 2
-                        axis = self._coord_to_axis(cx, cy)
-                        dp_type = "风管" if dp.entity_type == "duct" else "管线"
-                        conflicts.append({
-                            "type": "column_pipe_conflict",
-                            "severity": "B",
-                            "description": f"柱（来自{col.drawing_name[:25]}）与{dp_type}（来自{dp.drawing_name[:25]}）在{axis}区域存在穿越",
-                            "risk": "管线穿越柱子将破坏结构，需重新规划管线路径或柱预留套管",
-                            "involved": f"柱图:{col.drawing_name[:30]} | {dp_type}图:{dp.drawing_name[:30]}",
-                            "std": "GB50010-2010 6.4.12（柱开洞限制）",
-                            "floor": col.floor_level
-                        })
+                        # 共享逻辑：构建冲突描述
+                        conflicts.append(self._build_column_pipe_conflict(col, dp))
         if count > 0:
             self._logger.info(f"柱-管线穿越: {count}个")
         return conflicts

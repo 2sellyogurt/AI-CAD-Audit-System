@@ -225,15 +225,22 @@ class AgentOrchestrator:
 
     def execute_smart(
         self, drawing_infos, problem_pool=None, image_paths=None, scan_result=None,
+        project_params=None,
     ) -> OrchestrationReport:
         """全专业调度（3a）+ 执行确认回执（3b）。
 
         - 默认全专业调度：无论 scan_result 如何，始终激活所有已注册的 Agent
         - scan_result 仅用于记录元数据（检测到的专业、风险等级）和严重度过滤
         - 每个 Agent 均生成 ExecutionReceipt 作为执行确认回执
+        - project_params: 项目参数对象，注入到每个Agent的审查上下文中
         """
         if not self._agents:
             self.create_all_agents()
+
+        # 注入项目参数到所有Agent
+        if project_params is not None:
+            for agent in self._agents.values():
+                agent.set_project_params(project_params)
 
         report = OrchestrationReport()
         start_all = time.time()
@@ -249,7 +256,7 @@ class AgentOrchestrator:
         }
 
         # 【3a】默认全专业调度：激活所有已注册 Agent
-        active_ids = list(self.AGENT_CLASSES.keys())
+        active_ids = list(self._agents.keys())
         dispatch_method = "full"
 
         # scan_result 仅用于记录元数据和严重度过滤，不用于排除专业

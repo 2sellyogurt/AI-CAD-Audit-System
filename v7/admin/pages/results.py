@@ -77,7 +77,9 @@ def _normalize_issue(item):
         d["note"] = d.get("note", "")
         d["issue_id"] = d.get("issue_id", str(d.get("id", "")))
         return d
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).debug(f"问题数据标准化失败: {e}")
         return {"id": str(item), "severity": "C", "status": "new",
                 "discipline": "", "finding": "", "rationality": "R2",
                 "rationality_score": 60, "note": ""}
@@ -89,8 +91,9 @@ def _get_issues_from_cache():
         from v7.admin.server import _review_cache
         if _review_cache.get("ready") and _review_cache.get("issues"):
             return list(_review_cache["issues"])
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).debug(f"读取审查缓存失败: {e}")
     return []
 
 
@@ -103,7 +106,9 @@ def _get_issues_from_db():
             "SELECT * FROM review_issues ORDER BY severity, id"
         ).fetchall()
         return [_normalize_issue(r) for r in rows]
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"从数据库读取问题失败: {e}")
         return []
 
 
@@ -132,7 +137,9 @@ def _get_stats(issues):
     try:
         from v7.admin.server import _review_cache
         spatial_count = len(_review_cache.get("conflicts", []))
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).debug(f"读取空间冲突计数失败: {e}")
         spatial_count = 0
     disciplines = sorted(set(
         i.get("discipline", "") for i in issues if i.get("discipline")
@@ -884,8 +891,9 @@ def _api_reviews():
                 "started_at": r["started_at"] or "",
                 "finished_at": r["finished_at"] or "",
             })
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"读取审查记录失败2: {e}")
     return (200, {"reviews": reviews}, "application/json")
 
 
@@ -919,8 +927,8 @@ def _api_update_status(issue_id, body):
                     item["note"] = note
                 updated = True
                 break
-    except Exception:
-        pass
+    except Exception as e:
+        pass  # already logged above
 
     # 2. 更新数据库
     try:
@@ -933,8 +941,9 @@ def _api_update_status(issue_id, body):
         db.commit()
         if db.total_changes > 0:
             updated = True
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"更新数据库状态失败: {e}")
 
     if updated:
         return (200, {"ok": True, "status": new_status, "note": note}, "application/json")
@@ -964,8 +973,9 @@ def _api_batch_status(body):
                 if note:
                     item["note"] = note
                 count += 1
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"更新缓存状态失败: {e}")
 
     # 2. 数据库
     try:
@@ -978,8 +988,9 @@ def _api_batch_status(body):
         )
         db.commit()
         count = max(count, db.total_changes)
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"批量更新数据库状态失败: {e}")
 
     return (200, {"ok": True, "updated": count}, "application/json")
 
@@ -1117,6 +1128,7 @@ def _get_issues_by_review(review_id):
             (review_id,)
         ).fetchall()
         items = [_normalize_issue(r) for r in rows]
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"从数据库读取审查问题失败: {e}")
     return items

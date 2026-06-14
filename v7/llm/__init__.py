@@ -58,7 +58,8 @@ class LLMFactory:
         try:
             with open(path, "r", encoding="utf-8") as f:
                 return yaml.safe_load(f) or {}
-        except Exception:
+        except Exception as e:
+            logger.warning(f"加载LLM配置文件失败: {path}, {e}")
             return {}
 
     def get_text_adapter(self, provider: str = "") -> TextAdapter:
@@ -220,7 +221,9 @@ def llm_call_json(
         from .base_adapter import LLMBaseAdapter
         extracted = LLMBaseAdapter.extract_json(raw)
         return (json_parse(extracted), provider) if extracted else ({"raw_text": raw}, provider)
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"JSON extraction failed: {e}, returning raw text")
         return ({"raw_text": raw}, provider)
 
 

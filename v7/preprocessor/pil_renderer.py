@@ -67,6 +67,7 @@ def _compute_bounding_box(msp, blocks=None, margin: float = 0.05):
                 _add_point(loc[0], loc[1])
             elif etype == "SPLINE":
                 try:
+                    # 优先使用控制点
                     ctrl_pts = e.control_points
                     if ctrl_pts:
                         _add_points([(p[0], p[1]) for p in ctrl_pts])
@@ -74,8 +75,8 @@ def _compute_bounding_box(msp, blocks=None, margin: float = 0.05):
                         fit_pts = e.fit_points
                         if fit_pts:
                             _add_points([(p[0], p[1]) for p in fit_pts])
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"SPLINE 实体几何计算失败: {e}")
             elif etype == "ELLIPSE":
                 cx, cy = e.dxf.center[0], e.dxf.center[1]
                 mx = e.dxf.major_axis[0]
@@ -90,9 +91,10 @@ def _compute_bounding_box(msp, blocks=None, margin: float = 0.05):
                         for seg in path:
                             if hasattr(seg, 'vertices'):
                                 _add_points([(v[0], v[1]) for v in seg.vertices])
-                except Exception:
-                    pass
-        except Exception:
+                except Exception as ex:
+                    logger.debug(f"HATCH路径处理失败: {ex}")
+        except Exception as ex:
+            logger.debug(f"实体处理失败: {ex}")
             continue
 
     if not xs:
@@ -114,12 +116,22 @@ def _check_image_whiteness(img_path: str) -> bool:
             return True
         dark_pixels = (arr < 200).sum()
         return dark_pixels < 50
-    except Exception:
+    except Exception as ex:
+        logger.debug(f"图像检查失败: {img_path}, {ex}")
         return False
 
 
-def _expand_insert_entities(msp, blocks, max_depth=2, max_total=100000):
-    """将INSERT图块展开为平铺实体列表，应用变换矩阵。"""
+def _expand_insert_entities(msp, blocks, max_depth=None, max_total=100000):
+    """将INSERT图块展开为平铺实体列表，应用变换矩阵。
+
+    Args:
+        msp: 模型空间实体
+        blocks: 块定义字典
+        max_depth: INSERT递归展开最大深度，None时使用环境变量INSERT_MAX_DEPTH或默认10
+        max_total: 最大展开实体数量
+    """
+    if max_depth is None:
+        max_depth = int(os.environ.get("INSERT_MAX_DEPTH", "10"))
     expanded = []
     _expand_inserts(msp, blocks, expanded, 0, max_depth,
                     1.0, 1.0, 0.0, 0.0, 0.0, max_total)
@@ -152,7 +164,8 @@ def _expand_inserts(entities, blocks, result, depth, max_depth,
                                     dy + ndx * sx * sin_r + ndy * sy * cos_r)
             else:
                 result.append((e, sx, sy, cos_r, sin_r, dx, dy))
-        except Exception:
+        except Exception as ex:
+            logger.debug(f"图块展开失败: {ex}")
             continue
 
 
@@ -171,7 +184,8 @@ def render_dxf_pil(dxf_path: str, output_png: str, max_entities: int = 50000,
         else:
             doc = ezdxf.readfile(dxf_path)
         msp = doc.modelspace()
-    except Exception:
+    except Exception as ex:
+        logger.warning(f"DXF文件读取失败: {dxf_path}, {ex}")
         return False
 
     try:
@@ -224,8 +238,8 @@ def render_dxf_pil(dxf_path: str, output_png: str, max_entities: int = 50000,
                 expanded = _expand_insert_entities(msp, blocks)
                 if expanded:
                     rendered_entities = expanded
-            except Exception:
-                pass
+            except Exception as ex:
+                logger.debug(f"图块展开失败: {ex}")
 
         for item in rendered_entities:
             if entity_count >= max_entities:
@@ -259,7 +273,8 @@ def render_dxf_pil(dxf_path: str, output_png: str, max_entities: int = 50000,
                         try:
                             draw.arc([(cx - r, cy - r), (cx + r, cy + r)],
                                      a1_t, a2_t, fill="black", width=1)
-                        except Exception:
+                        except Exception as ex:
+                            logger.debug(f"圆弧绘制失败，降级为椭圆: {ex}")
                             draw.ellipse([(cx - r, cy - r), (cx + r, cy + r)],
                                          outline="black", width=1)
                     entity_count += 1
@@ -291,7 +306,8 @@ def render_dxf_pil(dxf_path: str, output_png: str, max_entities: int = 50000,
                             draw.text((x, y - 10 + line_idx * 16), line_text.strip()[:80],
                                       fill="blue", font=font)
                     entity_count += 1
-            except Exception:
+            except Exception as ex:
+                logger.debug(f"实体渲染失败: {ex}")
                 continue
 
         os.makedirs(os.path.dirname(output_png) or ".", exist_ok=True)

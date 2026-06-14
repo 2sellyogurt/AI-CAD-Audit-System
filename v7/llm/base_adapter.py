@@ -104,9 +104,10 @@ class LLMBaseAdapter(ABC):
         mode: str = "text",
         image_paths: Optional[List[str]] = None,
     ) -> Tuple[str, int]:
-        """带重试的调用。返回(结果, 尝试次数)。"""
+        """带重试的调用。返回(结果, 尝试次数)。使用指数退避策略。"""
         max_attempts = 1 + self.config.max_retries
         last_error = None
+        base_delay = self.config.retry_delay[0] if self.config.retry_delay else 2.0
 
         for attempt in range(max_attempts):
             try:
@@ -125,9 +126,19 @@ class LLMBaseAdapter(ABC):
             except Exception as e:
                 last_error = e
                 self._stats.total_calls += 1
+                
+                # 检查是否是限流错误（429）
+                error_str = str(e).lower()
+                is_rate_limit = "429" in error_str or "rate limit" in error_str or "too many requests" in error_str
+                
                 if attempt < max_attempts - 1:
-                    delay = self.config.retry_delay[min(attempt, len(self.config.retry_delay) - 1)]
-                    logger.warning(f"LLM调用失败(attempt {attempt+1}/{max_attempts}): {e}，{delay}秒后重试")
+                    # 指数退避：2s, 4s, 8s... 限流时额外加60秒
+                    if is_rate_limit:
+                        delay = 60 + (base_delay * (2 ** attempt))
+                        logger.warning(f"触发API限流(attempt {attempt+1}/{max_attempts}): {e}，{delay}秒后重试")
+                    else:
+                        delay = base_delay * (2 ** attempt)
+                        logger.warning(f"LLM调用失败(attempt {attempt+1}/{max_attempts}): {e}，{delay}秒后重试")
                     time.sleep(delay)
 
         self._stats.failed_calls += 1

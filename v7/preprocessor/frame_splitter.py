@@ -37,7 +37,8 @@ def detect_frames(dxf_path: str, min_size_mm: float = 200) -> List[Tuple[str, fl
     try:
         doc = ezdxf.readfile(dxf_path)
         msp = doc.modelspace()
-    except Exception:
+    except Exception as e:
+        logger.warning(f"DXF文件读取失败: {dxf_path}, {e}")
         return []
 
     candidates = []
@@ -69,7 +70,8 @@ def detect_frames(dxf_path: str, min_size_mm: float = 200) -> List[Tuple[str, fl
                     x0, y0 = bbox.extmin.x, bbox.extmin.y
                     x1, y1 = bbox.extmax.x, bbox.extmax.y
                     candidates.append((name, x0, y0, x1, y1, w * h))
-        except Exception:
+        except Exception as e:
+            logger.debug(f"图块处理失败: {e}")
             continue
 
     if not candidates:

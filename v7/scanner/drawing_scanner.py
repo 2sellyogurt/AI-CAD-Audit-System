@@ -133,8 +133,8 @@ class DrawingScanner:
             if data is None:
                 try:
                     data = json.loads(raw)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"JSON解析失败: {e}")
 
             if data and isinstance(data, dict):
                 result.building_type = str(data.get("building_type", "unknown"))

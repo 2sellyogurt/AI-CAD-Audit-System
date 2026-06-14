@@ -128,7 +128,7 @@ def run_dry_run(args):
     elapsed = time.time() - t0
     print(f"\n{'='*60}")
     print(f"  干跑完成，耗时 {elapsed:.1f} 秒")
-    print(f"  所有9个模块验证通过 ✓")
+    print(f"  所有 {len(pool)} 个模块验证通过 ✓")
     print(f"{'='*60}")
     return pool
 
@@ -165,6 +165,53 @@ def run_full(args):
         for d in drawings
     )
 
+    # === 阶段0.5: 项目参数锚定（VLM优先 + 正则fallback） ===
+    print("\n[0.5] 项目参数锚定...")
+    from v7.preprocessor.project_parameter_anchor import ProjectParameterAnchor
+    param_anchor = ProjectParameterAnchor()
+    project_params = None
+
+    # 找一张有PNG的图纸做VLM提取
+    title_block_png = None
+    for d in drawings:
+        if d.png_path and os.path.exists(d.png_path):
+            title_block_png = d.png_path
+            break
+
+    if title_block_png:
+        vlm_result = param_anchor.extract_with_vlm(title_block_png)
+        if vlm_result:
+            print(f"  VLM提取成功: {len(vlm_result)} 个参数")
+            # 用VLM结果构建ProjectParameters
+            from v7.preprocessor.project_parameter_anchor import ProjectParameters, ExtractedParameter
+            project_params = ProjectParameters()
+            for key, val in vlm_result.items():
+                if key.endswith("_confidence"):
+                    continue
+                if val is not None:
+                    setattr(project_params, key, val)
+                    conf = vlm_result.get(f"{key}_confidence", 0.85)
+                    project_params.parameters.append(ExtractedParameter(
+                        name=key, value=str(val), source="vlm",
+                        confidence=conf, requires_review=conf < 0.8,
+                    ))
+            # 保存JSON
+            params_json = os.path.join(args.output_dir, "project_params.json")
+            param_anchor.to_json(project_params, params_json)
+            print(f"  参数已保存: {params_json}")
+        else:
+            print("  VLM提取失败，使用正则fallback")
+
+    # 正则fallback
+    if project_params is None and dxf_files:
+        project_params = param_anchor.extract(dxf_files[0])
+        params_json = os.path.join(args.output_dir, "project_params.json")
+        param_anchor.to_json(project_params, params_json)
+        print(f"  正则提取完成: {len(project_params.parameters)} 个参数")
+
+    if project_params is None:
+        print("  未提取到项目参数，跳过")
+
     # === 阶段1: 图纸扫描 ===
     print("\n[1] 图纸智能扫描...")
     scanner = DrawingScanner(llm_factory=factory)
@@ -195,7 +242,8 @@ def run_full(args):
             image_paths[d.readable_name] = pngs
 
     report = orch.execute_smart(drawings, problem_pool=pool,
-                                image_paths=image_paths, scan_result=scan)
+                                image_paths=image_paths, scan_result=scan,
+                                project_params=project_params)
     print(f"  审查完成: {report.total_issues} 个问题, "
           f"{len(report.agent_reports)} 个Agent参与, "
           f"{len(report.failed_agents)} 个失败")

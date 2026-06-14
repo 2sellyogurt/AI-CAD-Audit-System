@@ -218,7 +218,9 @@ def _api_status():
             capture_output=True, text=True, timeout=5
         )
         child_count = int(result.stdout.strip() or "0")
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).debug(f"获取子进程数失败: {e}")
         child_count = 0
 
     from v7.db import get_db, SCHEMA_VERSION
@@ -229,7 +231,9 @@ def _api_status():
         db_checkpoints = db.execute("SELECT count(*) FROM checkpoints").fetchone()[0]
         db_reviews = db.execute("SELECT count(*) FROM reviews").fetchone()[0]
         db_issues = db.execute("SELECT count(*) FROM review_issues").fetchone()[0]
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"读取数据库统计失败: {e}")
         db_projects = 0
         db_drawings = 0
         db_checkpoints = 0

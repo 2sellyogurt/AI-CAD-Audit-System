@@ -2,7 +2,6 @@ import os
 from typing import Optional
 
 _DEFAULT_AUTOCAD_PATHS = [
-    r"E:\Program Files\CAD2024\AutoCAD 2024\acad.exe",
     r"C:\Program Files\Autodesk\AutoCAD 2024\acad.exe",
     r"C:\Program Files\Autodesk\AutoCAD 2023\acad.exe",
     r"C:\Program Files\Autodesk\AutoCAD 2022\acad.exe",
@@ -58,6 +57,6 @@ def find_oda_converter() -> Optional[str]:
         )
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip().split("\n")[0]
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"查找ODA转换器失败: {e}")
     return None

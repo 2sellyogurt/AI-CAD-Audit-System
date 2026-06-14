@@ -264,7 +264,8 @@ class CheckpointEngine:
             if sug and not sug.startswith("{") and not sug.startswith("```"):
                 result.suggestion = sug
             result.location = data.get("location", data.get("location_hint", ""))
-        except Exception:
+        except Exception as e:
+            logger.debug(f"JSON解析失败，降级为文本分析: {e}")
             if "不合规" in raw or "不符合" in raw or "不满足" in raw:
                 result.verdict = "不合规"
                 result.confidence = "low"

@@ -11,6 +11,9 @@
 """
 
 import os, sys, webbrowser, socket, time, threading, argparse
+import logging
+
+logger = logging.getLogger("v7.launcher")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -37,8 +40,8 @@ def open_browser():
     url = f"http://127.0.0.1:{PORT}/admin/dashboard"
     try:
         webbrowser.open(url)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"打开浏览器失败: {e}")
 
 
 def print_banner():
@@ -88,7 +91,6 @@ def main():
     try:
         from v7.admin.server import AdminHandler, _restore_cache_from_db
         from http.server import HTTPServer
-        logger = __import__('logging').getLogger("v7.launcher")
         logger.info(f"启动服务器 port={port}")
 
         # 初始化数据库并恢复上次审查结果

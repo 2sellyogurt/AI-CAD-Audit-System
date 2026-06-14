@@ -1081,8 +1081,9 @@ def _handle_upload_drawing(body):
     if ext == ".dxf":
         try:
             text_content, text_entities = _extract_dxf_text(dest_path)
-        except Exception:
-            pass
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).warning(f"提取DXF文本失败: {dest_path}, {e}")
 
     # 基于文件名初步分类专业
     discipline = _classify_discipline(filename)
@@ -1137,8 +1138,9 @@ def _handle_scan_drawings(body):
                 text_content, _ = _extract_dxf_text(r["file_path"])
                 if text_content:
                     discipline = _classify_by_text_content(text_content, r["filename"])
-            except Exception:
-                pass
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).debug(f"文本内容分类失败: {r.get('filename')}, {e}")
 
         db.execute(
             "UPDATE drawings SET discipline=?, status='ready' WHERE id=?",
@@ -1208,11 +1210,15 @@ def _extract_dxf_text(filepath):
     try:
         with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).debug(f"UTF-8读文件失败，尝试GBK: {filepath}, {e}")
         try:
             with open(filepath, "r", encoding="gbk", errors="ignore") as f:
                 content = f.read()
-        except Exception:
+        except Exception as e2:
+            import logging
+            logging.getLogger(__name__).warning(f"文件读取失败: {filepath}, {e2}")
             return "", 0
 
     lines = content.split("\n")

@@ -53,7 +53,8 @@ def _compute_text_density_map(img: np.ndarray, grid_rows: int, grid_cols: int) -
                 density_map[r, c] = text_pixel_ratio
 
         return density_map
-    except Exception:
+    except Exception as e:
+        logger.debug(f"密度图计算失败: {e}")
         return np.ones((grid_rows, grid_cols))
 
 

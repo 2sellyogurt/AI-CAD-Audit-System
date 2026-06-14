@@ -77,7 +77,8 @@ def _get_text_in_bbox(msp, x_min: float, y_min: float, x_max: float, y_max: floa
                 txt = e.dxf.text if e.dxftype() == "TEXT" else (e.plain_text() if hasattr(e, "plain_text") else "")
                 if txt and txt.strip():
                     texts.append(txt.strip())
-        except Exception:
+        except Exception as ex:
+            logger.debug(f"文本提取失败: {ex}")
             continue
     return texts
 
@@ -129,10 +130,11 @@ def _detect_xclip_boundaries(msp) -> List[Tuple[float, float, float, float]]:
                     xs = [p[0] for p in pts]
                     ys = [p[1] for p in pts]
                     boundaries.append((min(xs), min(ys), max(xs), max(ys)))
-            except Exception:
+            except Exception as ex:
+                logger.debug(f"边界提取失败: {ex}")
                 continue
-    except Exception:
-        pass
+    except Exception as ex:
+        logger.debug(f"图层遍历失败: {ex}")
     return boundaries
 
 
@@ -190,7 +192,8 @@ class EnhancedFrameDetector:
                 txt = e.dxf.text if etype == "TEXT" else (e.plain_text() if hasattr(e, "plain_text") else "")
                 if txt and txt.strip():
                     texts[etype].append((tx, ty, txt.strip()))
-            except Exception:
+            except Exception as ex:
+                logger.debug(f"文本缓存失败: {ex}")
                 continue
         return texts
 
@@ -241,7 +244,8 @@ class EnhancedFrameDetector:
                 name = _match_frame(w, h, self.tolerance)
                 if name:
                     results.append((name, min(xs), min(ys), max(xs), max(ys), w * h))
-            except Exception:
+            except Exception as ex:
+                logger.debug(f"INSERT图框检测失败: {ex}")
                 continue
         return results
 
@@ -271,7 +275,8 @@ class EnhancedFrameDetector:
                     name = _match_frame(w, h, self.tolerance)
                     if name:
                         results.append((name, x0, y0, x1, y1, w * h))
-            except Exception:
+            except Exception as ex:
+                logger.debug(f"INSERT图框检测失败: {ex}")
                 continue
         return results
 
@@ -343,14 +348,16 @@ class EnhancedFrameDetector:
             doc = ezdxf.readfile(dxf_path)
             layouts = [l for l in doc.layouts if l.name not in ("Model", "MODEL")]
             return len(layouts)
-        except Exception:
+        except Exception as e:
+            logger.debug(f"统计布局数失败: {dxf_path}, {e}")
             return 0
 
     def get_layout_names(self, dxf_path: str) -> List[str]:
         try:
             doc = ezdxf.readfile(dxf_path)
             return [l.name for l in doc.layouts if l.name not in ("Model", "MODEL")]
-        except Exception:
+        except Exception as e:
+            logger.debug(f"获取布局名失败: {dxf_path}, {e}")
             return []
 
     def detect_all(self, dxf_path: str) -> Dict:
@@ -358,8 +365,8 @@ class EnhancedFrameDetector:
         doc = None
         try:
             doc = ezdxf.readfile(dxf_path)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"综合检测DXF读取失败: {dxf_path}, {e}")
 
         msp_frames = self._detect_from_doc(doc) if doc else []
         layout_count, layout_names = self._get_layouts_from_doc(doc) if doc else (0, [])
@@ -387,5 +394,6 @@ class EnhancedFrameDetector:
         try:
             names = [l.name for l in doc.layouts if l.name not in ("Model", "MODEL")]
             return len(names), names
-        except Exception:
+        except Exception as e:
+            logger.debug(f"获取布局信息失败: {e}")
             return 0, []

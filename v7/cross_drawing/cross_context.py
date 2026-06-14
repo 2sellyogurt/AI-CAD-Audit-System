@@ -198,18 +198,30 @@ class CrossDrawingContext:
         for i in range(len(spatial_metas)):
             for j in range(i + 1, len(spatial_metas)):
                 a, b = spatial_metas[i], spatial_metas[j]
-                if not a.axis_range_x or not b.axis_range_x:
-                    continue
-                if a.axis_range_x != b.axis_range_x and len(a.axis_range_x) > 1 and len(b.axis_range_x) > 1:
-                    issues.append(CrossDrawingIssue(
-                        issue_type="axis_mismatch",
-                        severity="A",
-                        description=f"跨图纸轴网不一致：{a.name}({a.discipline})与{b.name}({b.discipline})的X向轴网范围不匹配",
-                        suggestion=f"核对两图纸轴网定义，确保轴号对应一致。如确属不同分区，需在设计说明中明确分区范围",
-                        drawing_a=a.name, drawing_b=b.name,
-                        evidence_a=", ".join(sorted(a.axis_range_x)[:10]),
-                        evidence_b=", ".join(sorted(b.axis_range_x)[:10]),
-                    ))
+                # 检查 X 方向轴网
+                if a.axis_range_x and b.axis_range_x:
+                    if a.axis_range_x != b.axis_range_x and len(a.axis_range_x) > 1 and len(b.axis_range_x) > 1:
+                        issues.append(CrossDrawingIssue(
+                            issue_type="axis_mismatch",
+                            severity="A",
+                            description=f"跨图纸轴网不一致：{a.name}({a.discipline})与{b.name}({b.discipline})的X向轴网范围不匹配",
+                            suggestion=f"核对两图纸轴网定义，确保轴号对应一致。如确属不同分区，需在设计说明中明确分区范围",
+                            drawing_a=a.name, drawing_b=b.name,
+                            evidence_a=", ".join(sorted(a.axis_range_x)[:10]),
+                            evidence_b=", ".join(sorted(b.axis_range_x)[:10]),
+                        ))
+                # 检查 Y 方向轴网
+                if a.axis_range_y and b.axis_range_y:
+                    if a.axis_range_y != b.axis_range_y and len(a.axis_range_y) > 1 and len(b.axis_range_y) > 1:
+                        issues.append(CrossDrawingIssue(
+                            issue_type="axis_mismatch",
+                            severity="A",
+                            description=f"跨图纸轴网不一致：{a.name}({a.discipline})与{b.name}({b.discipline})的Y向轴网范围不匹配",
+                            suggestion=f"核对两图纸轴网定义，确保轴号对应一致。如确属不同分区，需在设计说明中明确分区范围",
+                            drawing_a=a.name, drawing_b=b.name,
+                            evidence_a=", ".join(sorted(a.axis_range_y)[:10]),
+                            evidence_b=", ".join(sorted(b.axis_range_y)[:10]),
+                        ))
         return issues[:_MAX_ISSUES_PER_CHECK]
 
     def _check_floor_consistency(self, metas: List[DrawingMeta]) -> List[CrossDrawingIssue]:

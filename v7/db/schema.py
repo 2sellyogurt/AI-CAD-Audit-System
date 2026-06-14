@@ -183,7 +183,8 @@ def _current_schema_version() -> int:
         conn = get_db()
         row = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()
         return row[0] if row and row[0] else 0
-    except Exception:
+    except Exception as e:
+        logger.debug(f"查询schema版本失败: {e}")
         return 0
 
 
@@ -195,7 +196,8 @@ def _is_migration_applied(name: str) -> bool:
             "SELECT 1 FROM migration_history WHERE migration_name = ?", (name,)
         ).fetchone()
         return row is not None
-    except Exception:
+    except Exception as e:
+        logger.debug(f"查询迁移记录失败: {e}")
         return False
 
 

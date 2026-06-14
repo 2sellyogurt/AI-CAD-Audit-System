@@ -245,7 +245,8 @@ def extract_metadata_batch(dxf_dir: str, output_dir: str,
                     frames = detector.detect_frames(dxf)
                 else:
                     frames = None
-            except Exception:
+            except Exception as e:
+                logger.debug(f"图框检测失败: {dxf}, {e}")
                 frames = None
         else:
             frames = entry.get("frames", None)

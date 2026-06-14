@@ -106,7 +106,8 @@ def get_api_key(provider=None):
     if fernet:
         try:
             return fernet.decrypt(encrypted.encode()).decode()
-        except Exception:
+        except Exception as e:
+            logger.warning(f"API密钥解密失败: {e}")
             return None
     else:
         logger.warning("未安装cryptography库，无法解密API密钥")

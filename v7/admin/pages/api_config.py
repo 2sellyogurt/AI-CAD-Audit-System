@@ -109,10 +109,18 @@ def _save_provider_to_db(provider: str, data: dict):
         "SELECT * FROM api_keys WHERE provider = ?", (provider,)
     ).fetchone()
     if old_row:
-        old_val = json.dumps(dict(old_row), ensure_ascii=False, default=str)
+        old_dict = dict(old_row)
+        # 对旧密钥进行脱敏处理
+        if "api_key" in old_dict and old_dict["api_key"]:
+            old_dict["api_key"] = mask_key(old_dict["api_key"])
+        old_val = json.dumps(old_dict, ensure_ascii=False, default=str)
     else:
         old_val = ""
-    new_val = json.dumps(data, ensure_ascii=False, default=str)
+    # 对新密钥进行脱敏处理
+    new_data = data.copy()
+    if "api_key" in new_data and new_data["api_key"]:
+        new_data["api_key"] = mask_key(new_data["api_key"])
+    new_val = json.dumps(new_data, ensure_ascii=False, default=str)
     db.execute(
         "INSERT INTO config_versions (target_type, target_id, old_value, new_value) VALUES (?, ?, ?, ?)",
         ("api_key", provider, old_val, new_val),
@@ -236,7 +244,9 @@ def _get_cost_stats() -> dict:
             total_calls += calls
             total_input += int(estimated_tokens * 0.6)
             total_output += int(estimated_tokens * 0.4)
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"统计费用失败: {e}")
         stats = []
 
     return {

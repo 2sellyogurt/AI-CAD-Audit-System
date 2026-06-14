@@ -109,8 +109,8 @@ CMDDIA 1
     finally:
         try:
             os.remove(scr_path)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"清理脚本文件失败: {e}")
 
 
 def convert_dwg_batch(dwg_dir: str, output_dir: str,
@@ -190,7 +190,8 @@ def check_dwg_version(dwg_path: str) -> Optional[str]:
             ver = header[4:6].decode("ascii", errors="ignore")
             ver_key = header[4:6]
             return versions.get(ver_key, f"AC10{ver}")
-    except Exception:
+    except Exception as e:
+        logger.debug(f"读取DWG版本失败: {e}")
         return None
 
 
@@ -219,8 +220,14 @@ if __name__ == "__main__":
     import sys
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
-    dwg_dir = r"C:\Users\azyp\Desktop\图纸（医科大学）"
-    out_dir = r"C:\Users\azyp\Desktop\医科大图纸DXF"
+    # 示例用法：从命令行参数读取路径，或提示用户输入
+    if len(sys.argv) >= 3:
+        dwg_dir = sys.argv[1]
+        out_dir = sys.argv[2]
+    else:
+        print("用法: python dwg_converter.py <dwg目录> <输出目录>")
+        print("示例: python dwg_converter.py ./图纸 ./DXF输出")
+        sys.exit(1)
 
     print("=" * 60)
     print("DWG文件夹扫描")

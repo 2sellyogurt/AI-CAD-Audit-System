@@ -123,5 +123,5 @@ class VisionAdapter(LLMBaseAdapter):
             usage = response.usage
             if usage:
                 self._stats.total_tokens += usage.total_tokens
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"更新token统计失败: {e}")

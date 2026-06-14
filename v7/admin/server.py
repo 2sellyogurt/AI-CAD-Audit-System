@@ -147,7 +147,7 @@ def _hash(pw):
 def _verify(pw):
     if not os.path.exists(PASSWORD_FILE):
         return True
-    with open(PASSWORD_FILE, "r") as f:
+    with open(PASSWORD_FILE, "r", encoding="utf-8") as f:
         stored = f.read().strip()
     if "$" not in stored:
         return pw == stored
@@ -159,6 +159,46 @@ def _session_token():
         with open(PASSWORD_FILE) as f:
             return hashlib.sha256(f"v7_{f.read().strip()}".encode()).hexdigest()[:32]
     return "unset"
+
+# ── 登录限流 ──
+_login_attempts = {}  # {ip: [(timestamp, ...), ...]}
+_login_lock = threading.Lock()
+
+def _check_login_rate_limit(client_ip: str, max_attempts: int = 5, window_seconds: int = 300):
+    """检查登录频率限制。返回 (allowed, remaining_seconds)。
+    
+    Args:
+        client_ip: 客户端 IP
+        max_attempts: 窗口内最大尝试次数
+        window_seconds: 时间窗口（秒）
+    
+    Returns:
+        (allowed, remaining): 是否允许，剩余等待秒数
+    """
+    now = time.time()
+    
+    with _login_lock:
+        # 清理过期记录
+        if client_ip in _login_attempts:
+            _login_attempts[client_ip] = [
+                ts for ts in _login_attempts[client_ip]
+                if now - ts < window_seconds
+            ]
+        
+        attempts = _login_attempts.get(client_ip, [])
+        
+        if len(attempts) >= max_attempts:
+            # 计算最早尝试时间，得出解锁时间
+            oldest = min(attempts)
+            remaining = int(window_seconds - (now - oldest)) + 1
+            return False, max(1, remaining)
+        
+        # 记录本次尝试
+        if client_ip not in _login_attempts:
+            _login_attempts[client_ip] = []
+        _login_attempts[client_ip].append(now)
+        
+        return True, 0
 
 # ── HTML 组件 ──
 
@@ -349,6 +389,25 @@ def _run_review():
 
 # ── 请求处理器 ──
 
+# CORS 白名单：仅允许同源和 localhost 访问
+_ALLOWED_ORIGINS = {
+    "http://localhost",
+    "https://localhost",
+    "http://127.0.0.1",
+    "https://127.0.0.1",
+}
+
+def _check_cors_origin(handler):
+    """检查 Origin 是否在白名单内，返回 (allowed, origin)"""
+    origin = handler.headers.get("Origin", "")
+    if not origin:
+        return True, ""  # 无 Origin 头，允许（非浏览器请求）
+    # 检查是否匹配白名单
+    for allowed in _ALLOWED_ORIGINS:
+        if origin.startswith(allowed):
+            return True, origin
+    return False, origin
+
 class AdminHandler(BaseHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
@@ -383,7 +442,9 @@ class AdminHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def _cookie(self, name, value, max_age=86400*30):
-        self.send_header("Set-Cookie", f"{name}={value}; Path=/; Max-Age={max_age}; HttpOnly")
+        # 添加 Secure 和 SameSite 属性防止 CSRF 攻击
+        secure_flag = "; Secure" if self.headers.get("X-Forwarded-Proto") == "https" else ""
+        self.send_header("Set-Cookie", f"{name}={value}; Path=/; Max-Age={max_age}; HttpOnly; SameSite=Strict{secure_flag}")
 
     def _read_body(self):
         length = int(self.headers.get("Content-Length", 0))
@@ -404,18 +465,34 @@ class AdminHandler(BaseHTTPRequestHandler):
             self.send_response(204); self.end_headers(); return
         static_dir = os.path.join(HERE, "static")
         if path.startswith("/static/"):
-            fp = os.path.join(static_dir, path[8:])
-            if os.path.isfile(fp):
+            # 路径穿越防护：解析真实路径并验证
+            relative_path = path[8:]
+            fp = os.path.join(static_dir, relative_path)
+            real_fp = os.path.realpath(fp)
+            real_static_dir = os.path.realpath(static_dir)
+            # 确保文件在 static_dir 内
+            if not real_fp.startswith(real_static_dir + os.sep) and real_fp != real_static_dir:
+                self.send_response(403)
+                self.end_headers()
+                return
+            if os.path.isfile(real_fp):
                 self.send_response(200)
-                ext = os.path.splitext(fp)[1]
+                ext = os.path.splitext(real_fp)[1]
                 mimes = {".css":"text/css",".js":"text/javascript",".json":"application/json",
                          ".png":"image/png",".svg":"image/svg+xml",".ico":"image/x-icon"}
                 self.send_header("Content-Type", mimes.get(ext, "application/octet-stream"))
                 self.end_headers()
-                with open(fp,"rb") as f: self.wfile.write(f.read())
+                with open(real_fp,"rb") as f: self.wfile.write(f.read())
                 return
 
     def do_GET(self):
+        # CORS 检查
+        allowed, origin = _check_cors_origin(self)
+        if not allowed:
+            self.send_response(403)
+            self.end_headers()
+            return
+        
         self._serve_static()
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
@@ -430,8 +507,8 @@ class AdminHandler(BaseHTTPRequestHandler):
                 db = get_db()
                 row = db.execute("SELECT provider FROM api_keys WHERE api_key != '' LIMIT 1").fetchone()
                 has_api_key = row is not None
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"检查API密钥失败: {e}")
 
             api_hint = ""
             if not has_api_key:
@@ -523,105 +600,24 @@ class AdminHandler(BaseHTTPRequestHandler):
         self.send_error(404)
 
     def do_POST(self):
-        parsed = urlparse(self.path)
-        path = parsed.path.rstrip("/")
-        qs = parse_qs(parsed.query)
-        body = self._read_body()
-
-        if path == "/admin/api/login":
-            pw = body.get("password", "")
-            # 首次无密码时：任意密码可登录，并提示设置密码
-            is_first_login = not os.path.exists(PASSWORD_FILE)
-            if _verify(pw):
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json; charset=utf-8")
-                self._cookie("v7_admin_token", _session_token())
-                self.end_headers()
-                resp = {"ok": True}
-                if is_first_login:
-                    resp["firstLogin"] = True
-                    resp["hint"] = "首次登录成功，建议立即设置管理密码"
-                self.wfile.write(json.dumps(resp, ensure_ascii=False).encode())
-            else:
-                self._json(401, {"ok":False,"error":"密码错误"})
+        # CORS 检查
+        allowed, origin = _check_cors_origin(self)
+        if not allowed:
+            self.send_response(403)
+            self.end_headers()
             return
-
-        if path == "/admin/api/set-password":
-            pw = body.get("password", "")
-            if len(pw) < 4:
-                return self._json(400, {"ok":False,"error":"密码至少4位"})
-            with open(PASSWORD_FILE, "w") as f:
-                f.write(_hash(pw))
-            try: os.chmod(PASSWORD_FILE, 0o600)
-            except OSError: pass
-            return self._json(200, {"ok":True})
-
-        if path == "/admin/api/review/start":
-            with _cache_lock:
-                _review_cache["ready"] = False
-            threading.Thread(target=_run_review, daemon=True).start()
-            return self._json(202, {"status":"started"})
-
-        # 委托页面模块 API (POST)
-        for page_path, (mod_name, _, _) in _PAGE_MODULES.items():
-            api_prefix = page_path if mod_name == "api_config" else page_path.replace("/admin/", "/admin/api/", 1)
-            if path.startswith(api_prefix):
-                if mod_name not in _PAGE_MODULES_CACHE:
-                    _PAGE_MODULES_CACHE[mod_name] = _load_page(mod_name)
-                _, ha = _PAGE_MODULES_CACHE[mod_name]
-                result = ha(path, "POST", body, qs)
-                if result is not None:
-                    status, data, ct = result
-                    return self._json(status, data) if ct == "application/json" else self._send_raw(status, data, ct)
-
-        self._json(404, {"error":"not found"})
-
-    def do_PUT(self):
-        """PUT 请求委托给页面模块 API。"""
+        
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/")
         qs = parse_qs(parsed.query)
         body = self._read_body()
 
-        for page_path, (mod_name, _, _) in _PAGE_MODULES.items():
-            api_prefix = page_path if mod_name == "api_config" else page_path.replace("/admin/", "/admin/api/", 1)
-            if path.startswith(api_prefix):
-                if mod_name not in _PAGE_MODULES_CACHE:
-                    _PAGE_MODULES_CACHE[mod_name] = _load_page(mod_name)
-                _, ha = _PAGE_MODULES_CACHE[mod_name]
-                try:
-                    result = ha(path, "PUT", body, qs)
-                    if result is not None:
-                        status, data, ct = result
-                        return self._json(status, data) if ct == "application/json" else self._send_raw(status, data, ct)
-                except Exception as e:
-                    self._json(500, {"error": str(e)})
-                    return
-
-        self._json(404, {"error": "not found"})
-
-    def do_DELETE(self):
-        """DELETE 请求委托给页面模块 API。"""
-        parsed = urlparse(self.path)
-        path = parsed.path.rstrip("/")
-        qs = parse_qs(parsed.query)
-
-        for page_path, (mod_name, _, _) in _PAGE_MODULES.items():
-            api_prefix = page_path if mod_name == "api_config" else page_path.replace("/admin/", "/admin/api/", 1)
-            if path.startswith(api_prefix):
-                if mod_name not in _PAGE_MODULES_CACHE:
-                    _PAGE_MODULES_CACHE[mod_name] = _load_page(mod_name)
-                _, ha = _PAGE_MODULES_CACHE[mod_name]
-                try:
-                    result = ha(path, "DELETE", {}, qs)
-                    if result is not None:
-                        status, data, ct = result
-                        return self._json(status, data) if ct == "application/json" else self._send_raw(status, data, ct)
-                except Exception as e:
-                    self._json(500, {"error": str(e)})
-                    return
-
-        self._json(404, {"error": "not found"})
+        # 登录接口需要频率限制
+        if path == "/admin/api/login":
+            client_ip = self.client_address[0]
+            allowed, remaining = _check_login_rate_limit(client_ip)
+            if not allowed:
+                return self._json(429, {"ok": False, "error": f"登录尝试过于频繁，请在 {remaining} 秒后重试"})
 
 
 def main():

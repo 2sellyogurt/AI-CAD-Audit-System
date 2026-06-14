@@ -343,8 +343,8 @@ class ChiefAgent:
                             meaningful.append(v)
                     if meaningful:
                         return "；".join(meaningful)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"JSON解析失败: {e}")
 
         cleaned = re.sub(r'^\s*\{[^{}]*"verdict"\s*:\s*"[^"]*"[^{}]*\}\s*$', '', text, flags=re.DOTALL)
         cleaned = re.sub(r'```json\s*\{[^`]*\}\s*```', '', cleaned, flags=re.DOTALL)

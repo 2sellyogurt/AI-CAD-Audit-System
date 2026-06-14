@@ -216,7 +216,8 @@ class ProjectParameterAnchor:
                     if txt and txt.strip():
                         insert = e.dxf.insert if hasattr(e.dxf, "insert") else (0, 0, 0)
                         texts.append((txt.strip(), insert[0], insert[1]))
-                except Exception:
+                except Exception as ex:
+                    logger.debug(f"文本提取失败: {ex}")
                     continue
             return texts
         except Exception as e:
@@ -235,7 +236,8 @@ class ProjectParameterAnchor:
                     if text and text.strip():
                         insert = e.dxf.insert if hasattr(e.dxf, "insert") else (0, 0, 0)
                         dimensions.append((text.strip(), insert[0], insert[1]))
-                except Exception:
+                except Exception as ex:
+                    logger.debug(f"尺寸标注提取失败: {ex}")
                     continue
             return dimensions
         except Exception as e:
@@ -305,7 +307,8 @@ class ProjectParameterAnchor:
                 dy = abs(end[1] - start[1])
                 if dx < 10 and dy > self._facade_rules["vertical_lines"]["threshold"]:
                     vertical_lines.append((start[1], end[1]))
-            except Exception:
+            except Exception as ex:
+                logger.debug(f"线段分析失败: {ex}")
                 continue
         
         # 分析水平线（可能代表楼层高度）
@@ -318,7 +321,8 @@ class ProjectParameterAnchor:
                 dy = abs(end[1] - start[1])
                 if dy < 10 and dx > 100:
                     horizontal_segments.append((start[1], end[1]))
-            except Exception:
+            except Exception as ex:
+                logger.debug(f"线段分析失败: {ex}")
                 continue
         
         # 推断层数：水平线数量 - 1（顶层和底层各一条）
@@ -446,8 +450,8 @@ class ProjectParameterAnchor:
                 try:
                     value = converter(title_block_data[param_name])
                     source = "title_block"
-                except ValueError:
-                    pass
+                except ValueError as e:
+                    logger.debug(f"图签数据转换失败 {param_name}: {e}")
             
             # 其次文本搜索
             if value is None and param_name in text_search_data:
@@ -456,7 +460,8 @@ class ProjectParameterAnchor:
                         value = converter(val)
                         source = "text_search"
                         break
-                    except ValueError:
+                    except ValueError as e:
+                        logger.debug(f"文本搜索数据转换失败 {param_name}: {e}")
                         continue
             
             # 最后立面图推断
@@ -565,15 +570,124 @@ class ProjectParameterAnchor:
                 setattr(params, param_name, new_value)
                 return True
         return False
+    
+    def extract_with_vlm(self, image_path: str, max_retries: int = 2) -> Optional[Dict[str, Any]]:
+        """使用视觉LLM从图框图片提取项目参数
+        
+        Args:
+            image_path: 图框图片路径（PNG/JPG）
+            max_retries: 最大重试次数
+            
+        Returns:
+            提取的参数字典，失败返回None
+        """
+        from v7.llm import llm_call_json
+        
+        if not os.path.exists(image_path):
+            logger.warning(f"图框图片不存在: {image_path}")
+            return None
+        
+        prompt = """请从这张建筑图纸图框中提取以下参数，以JSON格式输出：
+
+{
+  "project_name": "项目名称",
+  "building_height": 数值(米，如50.5),
+  "floor_count": 数值(地上层数，如18),
+  "underground_floor_count": 数值(地下层数，如2),
+  "fire_resistance": "耐火等级(一级/二级/三级/四级)",
+  "seismic_level": "抗震设防烈度(6/7/8/9度)",
+  "building_type": "建筑类型(住宅/商业/办公/医院/学校等)",
+  "structural_system": "结构体系(框架/剪力墙/框架-剪力墙/钢结构等)",
+  "area": 数值(建筑面积㎡，如25000)
+}
+
+要求：
+1. 如果某个参数在图框中未找到，填null
+2. 数值类型不要带单位，只填数字
+3. 如果参数不确定，在字段后加"_confidence"标注置信度(0-1)
+4. 仅输出JSON，不要其他文字"""
+
+        system = "你是专业的建筑图纸分析助手，擅长从图框中提取关键参数。请严格按JSON格式输出。"
+        
+        for attempt in range(max_retries):
+            try:
+                result, provider = llm_call_json(
+                    prompt=prompt,
+                    system=system,
+                    mode="vision",
+                    image_paths=[image_path]
+                )
+                
+                if result and "raw_text" not in result:
+                    logger.info(f"VLM参数提取成功 (provider={provider})")
+                    return self._normalize_vlm_result(result)
+                else:
+                    logger.warning(f"VLM返回格式异常 (attempt {attempt+1})")
+                    
+            except Exception as e:
+                logger.error(f"VLM调用失败 (attempt {attempt+1}): {e}")
+                if attempt == max_retries - 1:
+                    return None
+        
+        return None
+    
+    def _normalize_vlm_result(self, raw: Dict[str, Any]) -> Dict[str, Any]:
+        """标准化VLM返回结果"""
+        result = {}
+        
+        # 字符串字段
+        for key in ["project_name", "fire_resistance", "seismic_level", 
+                    "building_type", "structural_system"]:
+            if raw.get(key):
+                result[key] = str(raw[key])
+        
+        # 数值字段
+        for key in ["building_height", "floor_count", "underground_floor_count", "area"]:
+            val = raw.get(key)
+            if val is not None:
+                try:
+                    if key == "floor_count" or key == "underground_floor_count":
+                        result[key] = int(float(val))
+                    else:
+                        result[key] = float(val)
+                except (ValueError, TypeError):
+                    pass
+        
+        # 置信度字段
+        for key in list(raw.keys()):
+            if key.endswith("_confidence"):
+                param_name = key.replace("_confidence", "")
+                try:
+                    conf = float(raw[key])
+                    if 0 <= conf <= 1:
+                        result[f"{param_name}_confidence"] = conf
+                except (ValueError, TypeError):
+                    pass
+        
+        return result
 
 
 # 测试用例
-def test_extraction():
-    """测试参数提取功能"""
+def test_extraction(dxf_path: str = None):
+    """测试参数提取功能
+    
+    Args:
+        dxf_path: 真实DXF文件路径，用于验证实际提取能力
+    """
     logging.basicConfig(level=logging.DEBUG)
     anchor = ProjectParameterAnchor()
     
-    # 测试模拟数据
+    if dxf_path and os.path.exists(dxf_path):
+        print(f"从真实DXF文件提取参数: {dxf_path}")
+        params = anchor.extract(dxf_path)
+        print(f"提取结果: {params.to_dict()}")
+        print(f"参数来源: {[p.source for p in params.parameters]}")
+    else:
+        print("提示: 未提供DXF文件路径，跳过实际提取测试")
+        print("用法: python project_parameter_anchor.py <dxf_path>")
+    
+    # 验证逻辑测试（使用模拟数据）
+    print("\n=== 验证逻辑测试 ===")
     test_params = ProjectParameters(
         project_name="测试项目",
         building_height=50.0,
@@ -598,4 +712,6 @@ def test_extraction():
 
 
 if __name__ == "__main__":
-    test_extraction()
+    import sys
+    dxf_path = sys.argv[1] if len(sys.argv) > 1 else None
+    test_extraction(dxf_path)
