@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# PyInstaller 构建产物
+build/
+dist/
+*.spec
+
+# 本地配置
+.env
+.encryption_key
+.encrypted_keys.json
+
+# 数据库备份
+src/v7/backups/
+
+# 日志
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# SQLite 临时文件
+*.db-shm
+*.db-wal
+
+# 本地工作数据
+.workbuddy/

@@ -1,0 +1,233 @@
+# ============================================================================
+#  检查点定义模板 —— 新增专业或新增检查点时请复制本文件
+#  文件名命名规范：{专业英文名}.yaml（如 dam_body.yaml）
+#  引擎会自动扫描本目录下所有 .yaml/.yml 文件并加载
+# ============================================================================
+#
+#  ===== 字段说明（星号*为必填） =====
+#
+#  id*                 格式：{专业缩写}-{3位序号}，如 DB-001
+#                      全项目唯一，一旦创建不可修改（关联历史审查记录）
+#
+#  name*               中文名称，会显示在审查报告和前端界面中
+#
+#  description*        简要说明该检查点审查什么，会显示在报告中
+#
+#  discipline*         所属专业，必须与 checkpoint_schema.py 中 Discipline 枚举值一致
+#                      可选值见该文件，或下方"12个已有专业"列表
+#
+#  check_type*         检查类型，决定引擎用什么方式执行审查，必须从以下15种中选择：
+#                      dimension_min      - 尺寸下限（如"宽度≥900mm"）
+#                      dimension_max      - 尺寸上限（如"面积≤2500㎡"）
+#                      dimension_range    - 尺寸范围（需同时配 value_range）
+#                      text_presence      - 图纸文字中必须出现某内容
+#                      text_absence       - 图纸文字中不能出现某内容
+#                      value_equal        - 数值等于
+#                      value_list         - 数值在列表中
+#                      count_min          - 数量下限
+#                      spatial_relation   - 空间关系检查
+#                      cross_discipline   - 跨专业一致性检查
+#                      fire_rating        - 防火等级检查
+#                      slope_check        - 坡度检查
+#                      clearance_check    - 净距检查
+#                      material_spec      - 材料规格检查
+#                      free_review        - 自由审查（不限定规则，LLM自行判断）
+#
+#  route*              审查路径，决定走文本分析还是视觉分析：
+#                      text   - 仅读取图纸文字，送文本LLM分析（快，成本低）
+#                      visual - 仅将图纸渲染为图片，送视觉LLM分析（能识别图形）
+#                      dual   - 双路径同时执行，相互校验（最准确，成本最高）
+#                      【自动升级规则】severity 为 A 或 B 时，无论此处写什么，
+#                      引擎会强制升级为 dual，确保高严重性检查点不遗漏
+#
+#  severity*           严重级别，决定路由策略和报告中的标注颜色：
+#                      A - 强条（强制条文，不合规可能危及安全）
+#                      B - 重要（影响功能或耐久性）
+#                      C - 一般（影响舒适性或观感）
+#                      D - 建议（优化建议，不强制）
+#
+#  priority            执行优先级，0-100 整数，越大越先执行
+#                      建议：A级=90-100，B级=70-89，C级=40-69，D级=0-39
+#
+#  standard_code*      引用的规范编号，如 GB50016-2014(2018)，会填入Prompt
+#                      必须真实存在，引擎不做真伪校验
+#
+#  standard_clause*    引用的条文号，如 "5.3.1"，会填入Prompt
+#
+#  clause_text*        条文原文，会完整填入Prompt供LLM参考
+#
+#  target_object       审查目标对象列表，如 ["防火分区", "防火隔间"]
+#                      用于在Prompt中告诉LLM"去找哪些东西"
+#
+#  target_property     审查的属性名，如 "净宽度"、"安装高度"
+#                      用于在Prompt中告诉LLM"读哪个数据"
+#
+#  operator            比较运算符，配合 check_type 使用：
+#                      >=  不小于   <=  不大于   ==  等于   in  在范围内
+#
+#  limit_value         限值（数字），如 2500、0.2、1.30
+#                      配合 operator 使用，如 operator: ">=" + limit_value: 900
+#                      表示"≥900"
+#
+#  unit                单位，如 ㎡、mm、m、%、h
+#                      填入Prompt时会拼接在限值后面
+#
+#  keywords            搜索关键词列表，文本路径使用
+#                      关键词太少→漏检  关键词太多→误报
+#                      建议包含：规范术语、图纸常见标注、同义词
+#
+#  exclude_keywords    排除关键词，文本路径使用，可选
+#
+#  regex_pattern       正则表达式，文本路径使用，可选
+#
+#  suggestion_template 整改建议模板，不合规时自动填入结果
+#
+#  applicable_building_types  适用建筑类型列表
+#                      可选值：["全部"]、["公共建筑"]、["住宅"]、["厂房"]、
+#                      ["高层建筑"]、["超高层建筑"]、["地下建筑"] 等
+#                      水利场景：["混凝土重力坝"]、["土石坝"]、["拱坝"] 等
+#
+#  applicable_floors   适用楼层列表，可选，如 ["地下", "首层", "标准层", "顶层"]
+#
+#  enabled             是否启用，true=参与审查，false=跳过
+#                      禁用优于删除（保留历史记录关联）
+#
+# ============================================================================
+#  已有12个建筑专业（discipline 字段可选值）：
+#    building      - 建筑
+#    structure     - 结构
+#    hvac          - 暖通
+#    plumbing      - 给排水
+#    electrical    - 电气
+#    fire          - 消防
+#    curtain_wall  - 幕墙
+#    decoration    - 装饰
+#    landscape     - 景观
+#    foundation_pit - 基坑
+#    building_extra - 建筑附加
+#    symbol_legend  - 图例符号
+#  新增专业需先在 checkpoint_schema.py 的 Discipline 枚举中添加
+# ============================================================================
+
+discipline: template
+description: 模板文件 - 新增专业时请复制本文件并修改
+
+checkpoints:
+
+  # ==========================================================================
+  # 示例1：尺寸下限检查（dimension_min）
+  # 适用场景：宽度、高度、间距、厚度等"不能太小"的检查
+  # ==========================================================================
+  - id: XXX-001
+    name: 示例-尺寸下限检查
+    description: 检查某构件的尺寸是否不小于规范规定的下限值
+    discipline: template
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 90
+    standard_code: GB50000-2024
+    standard_clause: "1.0.1"
+    clause_text: "某构件的尺寸不应小于900mm"
+    target_object: ["构件名称"]
+    target_property: "构件尺寸"
+    operator: ">="
+    limit_value: 900
+    unit: mm
+    keywords: ["关键词1", "关键词2"]
+    suggestion_template: "某构件尺寸小于900mm，请调整设计使之满足≥900mm的要求"
+    applicable_building_types: ["全部"]
+    enabled: false
+
+  # ==========================================================================
+  # 示例2：尺寸上限检查（dimension_max）
+  # 适用场景：面积、高度、长度等"不能太大"的检查
+  # ==========================================================================
+  - id: XXX-002
+    name: 示例-面积上限检查
+    description: 检查某区域面积是否不超过规范规定的上限值
+    discipline: template
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 95
+    standard_code: GB50000-2024
+    standard_clause: "2.0.1"
+    clause_text: "某区域的面积不应超过2500㎡"
+    target_object: ["区域名称"]
+    target_property: "区域面积"
+    operator: "<="
+    limit_value: 2500
+    unit: "㎡"
+    keywords: ["关键词1", "关键词2"]
+    suggestion_template: "某区域面积超过2500㎡上限，请重新划分或采取耐火措施"
+    applicable_building_types: ["全部"]
+    enabled: false
+
+  # ==========================================================================
+  # 示例3：文本必须存在检查（text_presence）
+  # 适用场景：必须有某个标注、必须有某系统、必须标注某信息
+  # ==========================================================================
+  - id: XXX-003
+    name: 示例-文本必须存在检查
+    description: 检查图纸中是否标注了必要的系统或构件
+    discipline: template
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 100
+    standard_code: GB50000-2024
+    standard_clause: "3.0.1"
+    clause_text: "规定场所必须设置某系统"
+    target_object: ["目标对象"]
+    target_property: "系统设置标注"
+    keywords: ["关键词1", "关键词2", "关键词3"]
+    suggestion_template: "规定场所未标注某系统，请按GB50000-2024 3.0.1条补充标注并完善设计"
+    applicable_building_types: ["全部"]
+    enabled: false
+
+  # ==========================================================================
+  # 示例4：自由审查（free_review）
+  # 适用场景：规则难以量化、需要LLM综合判断的审查
+  # 注意：free_review 不依赖 operator/limit_value 等字段
+  # ==========================================================================
+  - id: XXX-004
+    name: 示例-自由审查
+    description: 由AI综合判断设计合理性
+    discipline: template
+    check_type: free_review
+    route: dual
+    severity: C
+    priority: 50
+    standard_code: GB50000-2024
+    standard_clause: "4.0.1"
+    clause_text: "设计应符合相关技术标准和工程实践的要求"
+    target_object: ["审查对象"]
+    target_property: "综合合理性"
+    keywords: ["关键词1", "关键词2"]
+    suggestion_template: "请根据GB50000-2024 4.0.1条核查设计合理性"
+    applicable_building_types: ["全部"]
+    enabled: false
+
+  # ==========================================================================
+  # 示例5：材料规格检查（material_spec）
+  # 适用场景：检查材料型号、规格、等级是否符合规范
+  # ==========================================================================
+  - id: XXX-005
+    name: 示例-材料规格检查
+    description: 检查设计选用的材料规格是否符合规范要求
+    discipline: template
+    check_type: material_spec
+    route: text
+    severity: A
+    priority: 92
+    standard_code: GB50000-2024
+    standard_clause: "5.0.1"
+    clause_text: "某材料应采用不低于某等级/规格的产品"
+    target_object: ["材料名称"]
+    target_property: "材料规格等级"
+    keywords: ["关键词1", "关键词2", "材料型号"]
+    suggestion_template: "材料规格不满足规范要求，请按GB50000-2024 5.0.1条选用不低于规定等级的材料"
+    applicable_building_types: ["全部"]
+    enabled: false
+

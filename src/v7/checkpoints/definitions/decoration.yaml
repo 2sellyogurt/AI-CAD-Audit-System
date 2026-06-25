@@ -1,0 +1,89 @@
+discipline: decoration
+description: 装饰装修专业检查点 - 5个高频检查项
+
+checkpoints:
+
+  - id: DEC-001
+    name: 装修材料燃烧性能等级检查
+    description: 检查装饰装修材料的燃烧性能等级是否在设计说明中标注
+    discipline: decoration
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 92
+    standard_code: GB50222-2017
+    standard_clause: "3.1.2"
+    clause_text: "装修材料应按其燃烧性能等级分为A(不燃)、B1(难燃)、B2(可燃)和B3(易燃)四级，设计文件应注明装修材料的燃烧性能等级"
+    target_object: ["装修材料", "装饰材料"]
+    target_property: "应标注材料燃烧性能等级"
+    keywords: ["燃烧性能", "A级", "B1级", "B2级", "防火", "不燃", "难燃"]
+    suggestion_template: "在设计说明中补充标注各部位装修材料的燃烧性能等级要求"
+    applicable_building_types: ["全部"]
+
+  - id: DEC-002
+    name: 吊顶标高标注检查
+    description: 检查吊顶标高的标注是否完整
+    discipline: decoration
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 58
+    standard_code: GB50222-2017
+    standard_clause: "2.0.3"
+    clause_text: "吊顶标高应满足室内空间净高要求，并在设计图纸中明确标注各部位吊顶标高"
+    target_object: ["吊顶", "天花"]
+    target_property: "应标注吊顶标高"
+    keywords: ["吊顶", "标高", "天花", "吊顶标高"]
+    suggestion_template: "补充标注各区域吊顶标高，确保满足净高及设备安装要求"
+    applicable_building_types: ["全部"]
+
+  - id: DEC-003
+    name: 地面材料防滑等级检查
+    description: 检查地面装修材料的防滑等级是否在设计说明中标注
+    discipline: decoration
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 72
+    standard_code: GB50352-2019
+    standard_clause: "6.10.1"
+    clause_text: "建筑地面材料应根据使用场所的防滑要求选用，卫生间、浴室等潮湿场所地面防滑等级不应低于B级"
+    target_object: ["地面材料", "地面"]
+    target_property: "应标注防滑等级"
+    keywords: ["防滑", "地面", "防滑等级", "地砖"]
+    suggestion_template: "在设计说明中补充标注地面材料的防滑等级（B级/A级），潮湿场所地面防滑等级不应低于B级"
+    applicable_building_types: ["全部"]
+
+  - id: DEC-004
+    name: 墙面装饰龙骨间距标注检查
+    description: 检查墙面装饰龙骨的间距是否在图纸中标注
+    discipline: decoration
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 56
+    standard_code: GB50210-2018
+    standard_clause: "9.1.5"
+    clause_text: "墙面装饰龙骨的间距应根据饰面材料的重量和规格确定，并在施工图中标注龙骨布置间距"
+    target_object: ["墙面龙骨", "装饰龙骨"]
+    target_property: "应标注龙骨间距"
+    keywords: ["龙骨", "墙面", "装饰", "间距", "轻钢龙骨"]
+    suggestion_template: "补充标注墙面装饰龙骨的布置间距及龙骨规格型号"
+    applicable_building_types: ["全部"]
+
+  - id: DEC-005
+    name: 隔墙防火极限标注检查
+    description: 检查隔墙的耐火极限标注是否满足规范要求
+    discipline: decoration
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 74
+    standard_code: GB50016-2014(2018)
+    standard_clause: "5.1.2"
+    clause_text: "民用建筑各部位的隔墙应根据建筑耐火等级设置相应的耐火极限，设计文件应标注隔墙的耐火极限"
+    target_object: ["隔墙", "隔断墙"]
+    target_property: "应标注隔墙耐火极限"
+    keywords: ["隔墙", "耐火极限", "防火", "防火墙", "小时"]
+    suggestion_template: "在平面图或设计说明中补充标注各部位隔墙的耐火极限要求（≥1.00h/≥0.75h/≥0.50h）"
+    applicable_building_types: ["全部"]

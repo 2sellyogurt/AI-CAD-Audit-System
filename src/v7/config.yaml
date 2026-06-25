@@ -1,0 +1,170 @@
+# -*- coding: utf-8 -*-
+# ============================================================
+# AI智能审图系统 v7.0 空间分析配置文件
+# 职责：楼层映射、专业分类、图层规则、冲突检测参数
+# 注意：LLM配置见 config/project_config.yaml，两者职责不同请勿混淆
+# ============================================================
+
+# ── 楼层名称 → 数字映射 ──
+floor_map:
+  地下一层: -1
+  地下二层: -2
+  地下三层: -3
+  地下室: -1
+  一层: 1
+  二层: 2
+  三层: 3
+  四层: 4
+  五层: 5
+  六层: 6
+  七层: 7
+  八层: 8
+  九层: 9
+  十层: 10
+  十一层: 11
+  十二层: 12
+  十三层: 13
+  十四层: 14
+  十五层: 15
+  屋檐层: 16
+  屋顶层: 13
+  屋顶: 13
+  屋面: 13
+  设备层: 50
+  架空层: 1
+  夹层: 0.5
+  B1F: -1
+  B2F: -2
+  B3F: -3
+  1F: 1
+  2F: 2
+  3F: 3
+  4F: 4
+  5F: 5
+  6F: 6
+  7F: 7
+  8F: 8
+  9F: 9
+  10F: 10
+  11F: 11
+  12F: 12
+  13F: 13
+  RF: 13
+  BF: -1
+  B1: -1
+  B2: -2
+
+# ── 专业分类规则：文件名前缀匹配 ──
+discipline_rules:
+  hvac:
+    - h-
+    - h_
+    - nt-
+    - nt_
+    - xr-a
+    - xr_
+    - 暖通
+    - hvac
+    - air
+    - duct
+  structure:
+    - s-
+    - s_
+    - 结施
+    - 结构
+    - 基础
+    - 配筋
+    - 桩基
+    - 预制
+    - 埋件
+    - g-
+    - g_
+  plumbing:
+    - 水施
+    - 给排水
+    - 给水
+    - 排水
+    - 消火栓
+    - 喷淋
+    - ss-
+    - ss_
+    - p-
+    - p_
+  electrical:
+    - 电施
+    - 电气
+    - 配电
+    - 照明
+    - 防雷
+    - 弱电
+    - 变配电
+    - ds-
+    - ds_
+    - e-
+    - e_
+
+# ── Layer-Grammar 图层分类规则 ──
+layer_rules:
+  duct:
+    keywords: [airduct, 风管, 送风, 排风, 排烟, 回风, 新风, 空调, vent, exhaust, cuch-air]
+  pipe:
+    keywords: [pipe, 管, water, 给水, 排水, 消防, 喷淋, 雨水, 污水, 冷, 热, 废水, cuch-pipe]
+  beam:
+    keywords: [beam, 梁, beam_, 梁_]
+    blacklist: [pipe, 管, duct, 风管, cable, 标注, dim, text]
+  column:
+    keywords: [column, 柱, col_, 柱_]
+  wall:
+    keywords: [wall, 墙, wall_, 墙_]
+
+# ── 冲突检测：类型组合映射 ──
+conflict_rules:
+  beam_duct:
+    type: beam_duct_overlap
+    severity: B
+    std: "GB50010-2010 9.2.14（梁开洞限制）；GB51251-2017 4.4.8（排烟风管耐火要求）"
+    risk: "梁与风管平面叠合，若需穿梁则破坏结构承载力。需结构专业确认梁预留洞位置及补强方案，或调整风管路由"
+    overlap_threshold: 300
+  beam_pipe:
+    type: beam_pipe_overlap
+    severity: B
+    std: "GB50010-2010 9.2.14（梁开洞限制）"
+    risk: "管线与梁平面叠合，需确认标高关系，避免管线穿梁"
+    overlap_threshold: 200
+  column_pipe:
+    type: column_pipe_conflict
+    severity: B
+    std: "GB50010-2010 6.4.12（柱开洞限制）"
+    risk: "管线穿越柱子将破坏结构，需重新规划管线路径或柱预留套管"
+    overlap_threshold: 100
+  pipe_crossing:
+    type: pipe_crossing
+    severity: B
+    std: "GB50015-2019 4.4.2（排水管坡度）；GB50242-2002 3.3.3（管线综合排布）"
+    risk: "风管与给排水管交叉需协调标高，风管优先在上方，排水管需保证坡度"
+    overlap_threshold: 200
+  duct_wall:
+    type: duct_through_wall
+    severity: B
+    std: "GB50016-2014 6.3.5（防火封堵）；GB50243-2016 6.2.7（风管穿墙要求）"
+    risk: "风管穿墙需预留套管并做防火封堵，未预留将导致后期开洞破坏墙体"
+    overlap_threshold: 200
+  egress_width:
+    type: egress_width
+    severity: B
+    std: "GB50016-2014 5.5.18（疏散走道净宽）"
+    risk: "疏散走道净宽不足，影响人员疏散时间，需复核消防疏散宽度要求"
+    gap_min: 1100
+    gap_max: 4400
+    wall_min_length: 2000
+    parallelism_threshold: 300
+
+# ── 运行时参数 ──
+runtime:
+  max_file_size_mb: 150
+  spatial_tolerance: 500
+  cache_dir: .dxf_cache
+  floor_assignment_distance: 50000
+  elevation_tag_distance: 10000
+  dedup_bucket_size: 3000
+  dedup_grid_size: 500

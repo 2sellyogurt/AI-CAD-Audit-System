@@ -1,0 +1,98 @@
+discipline: building
+description: 建筑专业检查点 - 首批5个最高频检查项
+
+checkpoints:
+
+  - id: JZ-001
+    name: 疏散门净宽度检查
+    description: 检查住宅户门和安全出口的净宽度是否≥0.90m
+    discipline: building
+    check_type: dimension_min
+    route: dual
+    severity: A
+    priority: 100
+    standard_code: GB50016-2014(2018)
+    standard_clause: "5.5.30"
+    clause_text: "住宅建筑的户门、安全出口、疏散走道和疏散楼梯的各自总净宽度应经计算确定，且户门和安全出口的净宽度不应小于0.90m"
+    target_object: ["疏散门", "户门", "安全出口"]
+    target_property: "净宽度"
+    operator: ">="
+    limit_value: 900
+    unit: mm
+    suggestion_template: "将疏散门宽度增加至≥900mm"
+    applicable_building_types: ["全部"]
+
+  - id: JZ-002
+    name: 楼梯梯段净宽检查
+    description: 检查公共建筑室内楼梯梯段净宽是否≥1.1m
+    discipline: building
+    check_type: dimension_min
+    route: dual
+    severity: A
+    priority: 95
+    standard_code: GB50352-2019
+    standard_clause: "6.8.3"
+    clause_text: "公共建筑室内疏散楼梯梯段净宽度不应小于1.10m"
+    target_object: ["楼梯", "疏散楼梯"]
+    target_property: "梯段净宽"
+    operator: ">="
+    limit_value: 1100
+    unit: mm
+    suggestion_template: "增加楼梯梯段宽度至≥1100mm，或增设疏散楼梯"
+    applicable_building_types: ["公共建筑", "教育建筑", "医疗建筑"]
+
+  - id: JZ-003
+    name: 窗台防护措施检查
+    description: 检查窗台低于0.9m时是否标注有防护措施
+    discipline: building
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 90
+    standard_code: GB50352-2019
+    standard_clause: "6.11.6"
+    clause_text: "窗台低于0.90m时，应采取防护措施"
+    target_object: ["窗台", "窗"]
+    target_property: "窗台高度"
+    operator: ">="
+    limit_value: 900
+    unit: mm
+    keywords: ["窗台", "窗", "防护", "栏杆", "护栏"]
+    suggestion_template: "窗台低于900mm处增设防护栏杆≥900mm高"
+    applicable_building_types: ["全部"]
+
+  - id: JZ-004
+    name: 无障碍卫生间检查
+    description: 检查是否设有无障碍卫生间
+    discipline: building
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 85
+    standard_code: GB50763-2012
+    standard_clause: "3.5.1"
+    clause_text: "公共建筑的无障碍卫生间应靠近公共卫生间设置"
+    target_object: ["无障碍卫生间"]
+    target_property: "应标注无障碍卫生间"
+    keywords: ["无障碍", "卫生间", "残疾", "无障碍厕位"]
+    suggestion_template: "增设无障碍卫生间或无障碍厕位，并标注尺寸"
+    applicable_building_types: ["公共建筑", "教育建筑", "医疗建筑", "交通建筑"]
+
+  - id: JZ-005
+    name: 防火墙两侧门窗洞口间距检查
+    description: 防火墙两侧的门窗洞口水平距离应≥2m
+    discipline: building
+    check_type: dimension_min
+    route: visual
+    severity: A
+    priority: 80
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.1.3"
+    clause_text: "防火墙两侧的门、窗、洞口之间最近边缘的水平距离不应小于2.0m"
+    target_object: ["防火墙两侧", "门窗洞口"]
+    target_property: "水平间距"
+    operator: ">="
+    limit_value: 2000
+    unit: mm
+    suggestion_template: "调整门窗洞口位置或增设防火挑檐，使水平间距≥2000mm"
+    applicable_building_types: ["全部"]

@@ -1,0 +1,283 @@
+discipline: building_extra
+description: 建筑专业追加检查点 - 15个扩展检查项
+
+checkpoints:
+
+  - id: JZX-001
+    name: 走廊净宽度检查
+    description: 检查公共建筑走廊净宽度是否满足最小要求
+    discipline: building
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 90
+    standard_code: GB50352-2019
+    standard_clause: "6.7.5"
+    clause_text: "公共建筑走廊净宽度不应小于1.50m，医疗建筑走廊净宽度不应小于2.40m"
+    target_object: ["走廊", "走道", "公共走廊"]
+    target_property: "净宽度"
+    operator: ">="
+    limit_value: 1500
+    unit: mm
+    keywords: ["走廊", "走道", "净宽", "宽度"]
+    suggestion_template: "走廊净宽度不足1500mm，请调整平面布局增加走廊净宽"
+    applicable_building_types: ["公共建筑", "教育建筑", "办公建筑"]
+
+  - id: JZX-002
+    name: 台阶踏步高度一致性检查
+    description: 检查同一梯段内台阶踏步高度偏差是否在允许范围内
+    discipline: building
+    check_type: dimension_max
+    route: text
+    severity: B
+    priority: 75
+    standard_code: GB50352-2019
+    standard_clause: "6.7.10"
+    clause_text: "同一梯段内各级踏步的高度应一致，相邻踏步高度差不应大于15mm"
+    target_object: ["台阶", "踏步", "楼梯踏步"]
+    target_property: "踏步高度偏差"
+    operator: "<="
+    limit_value: 15
+    unit: mm
+    keywords: ["踏步", "台阶", "踏步高度", "高度差"]
+    suggestion_template: "调整踏步高度，确保同一梯段内相邻踏步高度差≤15mm"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-003
+    name: 无障碍坡道坡度检查
+    description: 检查无障碍坡道的坡度是否满足规范限值要求
+    discipline: building
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 88
+    standard_code: GB50763-2012
+    standard_clause: "3.4.1"
+    clause_text: "无障碍坡道的坡度不应大于1:12，且每段坡道最大高度不应大于0.75m"
+    target_object: ["无障碍坡道", "坡道"]
+    target_property: "坡度"
+    operator: "<="
+    limit_value: 0.0833
+    unit: "1/12"
+    keywords: ["坡道", "无障碍", "坡度", "无障碍坡道"]
+    suggestion_template: "调整坡道坡度至不大于1:12，或延长坡道水平长度以降低坡度"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-004
+    name: 屋面防水等级标注检查
+    description: 检查图纸中是否标注屋面防水等级
+    discipline: building
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 85
+    standard_code: GB50345-2012
+    standard_clause: "3.0.1"
+    clause_text: "屋面工程应根据建筑物的性质、重要程度、使用功能要求以及防水层合理使用年限，按不同等级进行防水设防"
+    target_object: ["屋面", "屋面防水"]
+    target_property: "应标注屋面防水等级"
+    keywords: ["防水等级", "屋面防水", "防水", "I级", "II级"]
+    suggestion_template: "在屋面说明或图纸中补充标注屋面防水等级（I级或II级）"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-005
+    name: 外墙保温材料燃烧性能检查
+    description: 检查图纸中外墙保温材料的燃烧性能等级是否标注
+    discipline: building
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 88
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.7.4"
+    clause_text: "建筑的外墙外保温系统应采用燃烧性能为A级的保温材料，当采用B1、B2级保温材料时，应设置防火隔离带"
+    target_object: ["外墙保温", "保温材料"]
+    target_property: "应标注保温材料燃烧性能等级"
+    keywords: ["保温", "燃烧性能", "A级", "B1级", "B2级", "防火"]
+    suggestion_template: "在外墙保温说明中补充标注保温材料的燃烧性能等级（A/B1/B2级）"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-006
+    name: 室内净高最小值检查
+    description: 检查室内主要空间净高是否满足最小高度要求
+    discipline: building
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 78
+    standard_code: GB50352-2019
+    standard_clause: "6.2.2"
+    clause_text: "室内净高应按楼地面完成面至吊顶或楼板底面之间的垂直距离计算，居住建筑室内净高不应低于2.40m"
+    target_object: ["室内", "房间", "居室"]
+    target_property: "室内净高"
+    operator: ">="
+    limit_value: 2400
+    unit: mm
+    keywords: ["净高", "室内净高", "层高"]
+    suggestion_template: "调整层高或吊顶高度，确保室内净高≥2400mm"
+    applicable_building_types: ["住宅", "宿舍", "公寓"]
+
+  - id: JZX-007
+    name: 变形缝设置位置标注检查
+    description: 检查图纸中变形缝的位置是否明确标注
+    discipline: building
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 60
+    standard_code: GB50352-2019
+    standard_clause: "6.1.1"
+    clause_text: "建筑物应根据其长度、平面形状、高度差异和地基条件设置变形缝"
+    target_object: ["变形缝", "伸缩缝", "沉降缝", "抗震缝"]
+    target_property: "应标注变形缝位置"
+    keywords: ["变形缝", "伸缩缝", "沉降缝", "抗震缝", "缝"]
+    suggestion_template: "在设计说明或平面图中补充标注变形缝的类型和位置"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-008
+    name: 电梯井道尺寸标注检查
+    description: 检查电梯井道的平面尺寸是否标注完整
+    discipline: building
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 72
+    standard_code: GB50352-2019
+    standard_clause: "6.8.1"
+    clause_text: "电梯井道和机房的尺寸应满足电梯安装、维修和使用的空间要求"
+    target_object: ["电梯井道", "电梯"]
+    target_property: "井道最小净尺寸"
+    operator: ">="
+    limit_value: 2000
+    unit: mm
+    keywords: ["电梯", "井道", "电梯井", "井道尺寸"]
+    suggestion_template: "补充标注电梯井道平面尺寸，确保满足所选电梯型号的最小尺寸要求"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-009
+    name: 女儿墙最小高度检查
+    description: 检查女儿墙高度是否满足规范最小高度要求
+    discipline: building
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 75
+    standard_code: GB50352-2019
+    standard_clause: "6.11.3"
+    clause_text: "上人屋面女儿墙净高不应小于1.10m，不上人屋面女儿墙净高不应小于0.60m"
+    target_object: ["女儿墙", "屋面女儿墙"]
+    target_property: "女儿墙净高"
+    operator: ">="
+    limit_value: 600
+    unit: mm
+    keywords: ["女儿墙", "屋面", "防护", "栏杆"]
+    suggestion_template: "不上人屋面女儿墙高度应≥600mm，上人屋面女儿墙高度应≥1100mm，请根据屋面类型调整"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-010
+    name: 防火门门洞尺寸标注检查
+    description: 检查图纸中防火门的门洞尺寸是否标注完整
+    discipline: building
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 62
+    standard_code: GB50016-2014(2018)
+    standard_clause: "6.1.5"
+    clause_text: "防火门应具有自闭功能，其门洞尺寸应满足疏散和消防通行要求"
+    target_object: ["防火门", "防火门窗"]
+    target_property: "应标注防火门门洞尺寸"
+    keywords: ["防火门", "门洞", "尺寸", "防火"]
+    suggestion_template: "在平面图中补充标注防火门的门洞尺寸及防火等级"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-011
+    name: 卫生间地漏设置检查
+    description: 检查卫生间平面图中是否标注地漏位置
+    discipline: building
+    check_type: text_presence
+    route: text
+    severity: C
+    priority: 55
+    standard_code: GB50352-2019
+    standard_clause: "6.7.8"
+    clause_text: "卫生间应设置地漏，地漏应设置在有排水要求的部位"
+    target_object: ["卫生间", "厕所"]
+    target_property: "应标注地漏位置"
+    keywords: ["地漏", "卫生间", "排水", "地面排水"]
+    suggestion_template: "在卫生间平面图中补充标注地漏位置及排水坡度"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-012
+    name: 外墙伸缩缝间距检查
+    description: 检查外墙伸缩缝的设置间距是否满足规范要求
+    discipline: building
+    check_type: dimension_max
+    route: text
+    severity: C
+    priority: 58
+    standard_code: GB50352-2019
+    standard_clause: "4.3.2"
+    clause_text: "建筑体形长度不宜过大，当建筑长度超过规定值时，应设置伸缩缝，伸缩缝最大间距不宜超过60m"
+    target_object: ["外墙", "伸缩缝"]
+    target_property: "伸缩缝间距"
+    operator: "<="
+    limit_value: 60000
+    unit: mm
+    keywords: ["伸缩缝", "间距", "外墙", "温度缝"]
+    suggestion_template: "外墙伸缩缝间距不应超过60000mm，请在超长区段增设伸缩缝"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-013
+    name: 汽车坡道最小宽度检查
+    description: 检查地下车库汽车坡道宽度是否满足最小要求
+    discipline: building
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 74
+    standard_code: JGJ100-2015
+    standard_clause: "4.1.5"
+    clause_text: "汽车库内坡道最小宽度，直线单车道不应小于3.0m，直线双车道不应小于5.5m"
+    target_object: ["汽车坡道", "车库坡道"]
+    target_property: "坡道宽度"
+    operator: ">="
+    limit_value: 3000
+    unit: mm
+    keywords: ["坡道", "车库", "汽车坡道", "宽度"]
+    suggestion_template: "汽车坡道宽度不足3000mm，请调整坡道宽度满足规范要求"
+    applicable_building_types: ["公共建筑", "住宅", "商业建筑"]
+
+  - id: JZX-014
+    name: 地下室防水等级标注检查
+    description: 检查地下室防水等级是否在设计说明中标注
+    discipline: building
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 86
+    standard_code: GB50108-2008
+    standard_clause: "3.1.4"
+    clause_text: "地下工程的防水等级应根据工程的重要性和使用功能要求确定，分为一级、二级、三级、四级"
+    target_object: ["地下室", "地下工程"]
+    target_property: "应标注地下室防水等级"
+    keywords: ["防水等级", "地下防水", "地下室防水", "一级", "二级"]
+    suggestion_template: "在设计说明中补充标注地下室防水等级（一级/二级/三级/四级）"
+    applicable_building_types: ["全部"]
+
+  - id: JZX-015
+    name: 绿色建筑等级标注检查
+    description: 检查图纸中是否标注绿色建筑等级要求
+    discipline: building
+    check_type: text_presence
+    route: text
+    severity: D
+    priority: 45
+    standard_code: GB/T50378-2019
+    standard_clause: "3.2.1"
+    clause_text: "绿色建筑等级划分为基本级、一星级、二星级、三星级四个等级"
+    target_object: ["绿色建筑", "绿建"]
+    target_property: "应标注绿色建筑等级"
+    keywords: ["绿色建筑", "绿建", "星级", "绿色"]
+    suggestion_template: "在设计说明中补充标注绿色建筑等级（基本级/一星级/二星级/三星级）"
+    applicable_building_types: ["全部"]

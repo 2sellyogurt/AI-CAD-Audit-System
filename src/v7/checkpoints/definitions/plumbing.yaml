@@ -1,0 +1,467 @@
+discipline: plumbing
+description: 给排水专业检查点 - 20个高频检查项
+
+checkpoints:
+
+  # ============================================================================
+  # PLUMB-001 ~ PLUMB-020: 给排水专业20个高频检查项
+  # 引用标准: GB50974-2014      消防给水及消火栓系统技术规范
+  #           GB50015-2019      建筑给水排水设计标准
+  #           GB50084-2017      自动喷水灭火系统设计规范
+  #           GB50336-2018      建筑中水设计规范
+  #           GB50268-2008      给水排水管道工程施工及验收规范
+  # ============================================================================
+
+  # ---------------------------------------------------------------------------
+  # 1. 消火栓布置间距检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-001
+    name: 消火栓布置间距检查
+    description: 检查室内消火栓布置间距是否满足规范要求
+    discipline: plumbing
+    check_type: dimension_max
+    route: visual
+    severity: A
+    priority: 100
+    standard_code: GB50974-2014
+    standard_clause: "7.4.6"
+    clause_text: "室内消火栓的布置应满足同一平面有2支消防水枪的2股充实水柱同时达到任何部位的要求，布置间距不应大于30.0m；建筑高度≤54m且单元式住宅可仅1支水枪1股充实水柱，布置间距不应大于50.0m"
+    target_object: ["消火栓", "室内消火栓", "消火栓箱"]
+    target_property: "消火栓布置间距"
+    operator: "<="
+    limit_value: 30
+    unit: m
+    keywords: ["消火栓", "间距", "充实水柱"]
+    suggestion_template: "室内消火栓布置间距超出规范限值，请按GB50974-2014 7.4.6条重新布置，≤30m"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 2. 消火栓栓口动压检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-002
+    name: 消火栓栓口动压检查
+    description: 检查消火栓栓口动压力是否在规范允许范围内
+    discipline: plumbing
+    check_type: dimension_range
+    route: text
+    severity: A
+    priority: 99
+    standard_code: GB50974-2014
+    standard_clause: "7.4.12"
+    clause_text: "室内消火栓栓口动压力不应大于0.50MPa，当大于0.70MPa时必须设置减压装置；高层建筑、厂房、库房和室内净空高度超过8m的民用建筑等场所，栓口动压不应小于0.35MPa，其他场所不应小于0.25MPa"
+    target_object: ["消火栓", "消火栓栓口", "消火栓系统"]
+    target_property: "栓口动压力"
+    operator: ">="
+    limit_value: 0.25
+    unit: MPa
+    keywords: ["消火栓", "动压", "栓口", "减压"]
+    suggestion_template: "消火栓栓口动压不满足规范要求，请按GB50974-2014 7.4.12条复核系统水力计算，不足处应增设增压设施"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 3. 排水管最小坡度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-003
+    name: 排水管最小坡度检查
+    description: 检查室内排水横管的最小坡度是否满足规范要求
+    discipline: plumbing
+    check_type: slope_check
+    route: text
+    severity: B
+    priority: 85
+    standard_code: GB50015-2019
+    standard_clause: "4.5.5"
+    clause_text: "建筑物内生活排水铸铁管道的最小坡度和最大设计充满度：管径50mm通用坡度0.035、最小坡度0.025；管径75mm通用坡度0.025、最小坡度0.015；管径110mm通用坡度0.020、最小坡度0.012"
+    target_object: ["排水管", "排水横管", "污水管"]
+    target_property: "排水管坡度"
+    operator: ">="
+    limit_value: 0.012
+    unit: ""
+    keywords: ["排水管", "坡度", "排水横管", "最小坡度"]
+    suggestion_template: "排水横管坡度不满足最小坡度要求，请按GB50015-2019 4.5.5条调整管道坡度"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 4. 给水管最小管径检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-004
+    name: 给水管最小管径检查
+    description: 检查给水引入管和入户管最小管径是否满足规范要求
+    discipline: plumbing
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 82
+    standard_code: GB50015-2019
+    standard_clause: "3.5.10"
+    clause_text: "住宅的入户管公称直径不宜小于20mm；给水引入管管径不宜小于20mm，且建筑物引入管不宜小于DN20"
+    target_object: ["给水管", "给水引入管", "入户管"]
+    target_property: "给水管最小管径"
+    operator: ">="
+    limit_value: 20
+    unit: mm
+    keywords: ["给水管", "管径", "引入管", "入户管"]
+    suggestion_template: "给水管最小管径不满足GB50015-2019 3.5.10条要求，请增大管径至≥DN20"
+    applicable_building_types: ["住宅建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 5. 喷淋喷头最大间距检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-005
+    name: 喷淋喷头最大间距检查
+    description: 检查自动喷水灭火系统喷头布置间距是否超过规范限值
+    discipline: plumbing
+    check_type: dimension_max
+    route: visual
+    severity: A
+    priority: 98
+    standard_code: GB50084-2017
+    standard_clause: "7.1.2"
+    clause_text: "直立型、下垂型标准覆盖面积洒水喷头的布置间距应根据设置场所火灾危险等级确定，中危险级Ⅰ级喷头最大间距不应大于3.6m，中危险级Ⅱ级不应大于3.4m"
+    target_object: ["喷淋喷头", "洒水喷头", "喷头"]
+    target_property: "喷头布置间距"
+    operator: "<="
+    limit_value: 3.6
+    unit: m
+    keywords: ["喷头", "喷淋", "喷头间距", "洒水喷头"]
+    suggestion_template: "喷淋喷头布置间距超出规范限值，请按GB50084-2017 7.1.2条重新布置"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 6. 消防水池容量标注检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-006
+    name: 消防水池容量标注检查
+    description: 检查消防水池有效容积是否在设计图中正确标注并满足火灾延续时间用水量
+    discipline: plumbing
+    check_type: value_equal
+    route: text
+    severity: A
+    priority: 97
+    standard_code: GB50974-2014
+    standard_clause: "4.3.2"
+    clause_text: "消防水池有效容积的计算应符合下列规定：当市政给水管网能保证室外消防给水设计流量时，消防水池的有效容积应满足在火灾延续时间内室内消防用水量的要求"
+    target_object: ["消防水池", "消防水箱", "消防储水"]
+    target_property: "消防水池有效容积"
+    operator: ">="
+    limit_value: 0
+    unit: "m³"
+    keywords: ["消防水池", "有效容积", "火灾延续时间"]
+    suggestion_template: "消防水池有效容积未标注或标注值与计算值不符，请按GB50974-2014 4.3.2条核实并标注有效容积"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 7. 水泵接合器数量检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-007
+    name: 水泵接合器数量检查
+    description: 检查消防水泵接合器设置数量是否满足规范要求
+    discipline: plumbing
+    check_type: count_min
+    route: text
+    severity: B
+    priority: 80
+    standard_code: GB50974-2014
+    standard_clause: "5.4.3"
+    clause_text: "消防水泵接合器的给水流量宜按每个10L/s～15L/s计算。每种水灭火系统的消防水泵接合器设置数量应按系统设计流量经计算确定，但当计算数量超过3个时，可根据供水可靠性适当减少"
+    target_object: ["水泵接合器", "消防接合器"]
+    target_property: "水泵接合器数量"
+    operator: ">="
+    limit_value: 1
+    unit: "个"
+    keywords: ["水泵接合器", "消防车", "供水"]
+    suggestion_template: "水泵接合器数量不满足系统设计流量要求，请按GB50974-2014 5.4.3条复核计算并调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 8. 化粪池有效容积检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-008
+    name: 化粪池有效容积检查
+    description: 检查化粪池有效容积是否满足使用人数和清掏周期要求
+    discipline: plumbing
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 75
+    standard_code: GB50015-2019
+    standard_clause: "4.10.15"
+    clause_text: "化粪池有效容积应为污水部分和污泥部分容积之和，按使用人数、每人每日排水量和污泥量、清掏周期计算确定"
+    target_object: ["化粪池", "污水处理构筑物"]
+    target_property: "化粪池有效容积"
+    operator: ">="
+    limit_value: 0
+    unit: "m³"
+    keywords: ["化粪池", "有效容积", "清掏周期"]
+    suggestion_template: "化粪池有效容积未标注或计算值不满足使用人数要求，请按GB50015-2019 4.10.15条重新计算"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 9. 热水管保温层厚度检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-009
+    name: 热水管保温层厚度检查
+    description: 检查热水供应系统管道保温层厚度是否满足规范要求
+    discipline: plumbing
+    check_type: dimension_min
+    route: text
+    severity: C
+    priority: 55
+    standard_code: GB50015-2019
+    standard_clause: "6.8.5"
+    clause_text: "热水供水管和回水管均应保温，保温层厚度应经计算确定。保温材料应选用不燃或难燃材料"
+    target_object: ["热水管", "保温层", "热水供水管"]
+    target_property: "保温层厚度"
+    operator: ">="
+    limit_value: 20
+    unit: mm
+    keywords: ["热水管", "保温", "保温层", "热水系统"]
+    suggestion_template: "热水管保温层厚度不满足GB50015-2019 6.4.6条要求，请复核并增加保温层厚度"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 10. 雨水斗最大泄流量检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-010
+    name: 雨水斗最大泄流量检查
+    description: 检查屋面雨水斗最大泄流量是否满足规范要求
+    discipline: plumbing
+    check_type: dimension_max
+    route: text
+    severity: B
+    priority: 78
+    standard_code: GB50015-2019
+    standard_clause: "5.3.5"
+    clause_text: "屋面雨水按重力流和压力流分别计算，雨水斗最大设计泄流量应根据雨水斗规格和屋面坡度等因素确定"
+    target_object: ["雨水斗", "屋面雨水系统", "雨水管"]
+    target_property: "雨水斗最大泄流量"
+    operator: "<="
+    limit_value: 0
+    unit: "L/s"
+    keywords: ["雨水斗", "泄流量", "屋面排水", "雨水系统"]
+    suggestion_template: "雨水斗最大泄流量超出规范限值，请按GB50015-2019 5.3.5条复核并调整雨水斗数量或规格"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 11. 通气管管径检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-011
+    name: 通气管管径检查
+    description: 检查排水系统通气管管径是否满足规范要求
+    discipline: plumbing
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 76
+    standard_code: GB50015-2019
+    standard_clause: "4.7.13"
+    clause_text: "排水系统通气管的管径应根据排水管排水能力、管道长度确定，伸顶通气管管径不应小于排水立管管径的1/2"
+    target_object: ["通气管", "伸顶通气管", "排水系统"]
+    target_property: "通气管管径"
+    operator: ">="
+    limit_value: 0
+    unit: mm
+    keywords: ["通气管", "管径", "排水", "伸顶通气"]
+    suggestion_template: "通气管管径不满足GB50015-2019 4.7.13条要求，请按排水立管管径的1/2复核并调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 12. 立管最大排水能力检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-012
+    name: 立管最大排水能力检查
+    description: 检查生活排水立管的设计排水量是否超过规范允许的最大排水能力
+    discipline: plumbing
+    check_type: dimension_max
+    route: text
+    severity: B
+    priority: 74
+    standard_code: GB50015-2019
+    standard_clause: "4.5.8"
+    clause_text: "立管最大设计排水能力应符合规范规定，de110伸顶通气立管最大设计排水能力为4.0L/s，de110设专用通气立管为6.3L/s"
+    target_object: ["排水立管", "污水立管", "废水立管"]
+    target_property: "排水立管设计排水能力"
+    operator: "<="
+    limit_value: 4.0
+    unit: "L/s"
+    keywords: ["排水立管", "排水能力", "污水立管"]
+    suggestion_template: "排水立管设计排水量超出最大排水能力限值，请按GB50015-2019 4.5.8条加大管径或增设专用通气管"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 13. 给水引入管最小覆土深度检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-013
+    name: 给水引入管最小覆土深度检查
+    description: 检查给水引入管室外埋地部分的覆土深度是否满足防冻要求
+    discipline: plumbing
+    check_type: dimension_min
+    route: text
+    severity: B
+    priority: 72
+    standard_code: GB50015-2019
+    standard_clause: "3.6.8"
+    clause_text: "室外给水管道的覆土深度应根据土壤冰冻深度、车辆荷载等因素确定，管顶最小覆土深度不宜小于0.70m，且在冰冻线以下不小于0.15m"
+    target_object: ["给水管", "引入管", "埋地给水管"]
+    target_property: "最小覆土深度"
+    operator: ">="
+    limit_value: 0.7
+    unit: m
+    keywords: ["覆土", "埋深", "冰冻线", "给水管"]
+    suggestion_template: "给水引入管最小覆土深度不满足GB50015-2019 3.6.8条要求，请加大埋深至冰冻线以下"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 14. 喷淋系统最不利点压力检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-014
+    name: 喷淋系统最不利点压力检查
+    description: 检查自动喷水灭火系统最不利点处喷头的工作压力是否满足规范要求
+    discipline: plumbing
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 96
+    standard_code: GB50084-2017
+    standard_clause: "9.1.4"
+    clause_text: "系统最不利点处洒水喷头的工作压力应计算确定，且不应低于0.05MPa"
+    target_object: ["喷淋系统", "洒水喷头", "喷淋管道"]
+    target_property: "最不利点喷头工作压力"
+    operator: ">="
+    limit_value: 0.05
+    unit: MPa
+    keywords: ["喷淋", "最不利点", "喷头压力", "工作压力"]
+    suggestion_template: "喷淋系统最不利点处喷头工作压力不足0.05MPa，请按GB50084-2017 9.1.4条复核水力计算并调整"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 15. 消防水泵流量扬程标注检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-015
+    name: 消防水泵流量扬程标注检查
+    description: 检查消防水泵的流量、扬程参数是否在设计图中正确标注
+    discipline: plumbing
+    check_type: text_presence
+    route: dual
+    severity: A
+    priority: 95
+    standard_code: GB50974-2014
+    standard_clause: "5.1.6"
+    clause_text: "消防水泵的性能应满足消防给水系统所需流量和压力的要求，设计图中应标注消防水泵的流量和扬程参数"
+    target_object: ["消防水泵", "消防泵", "水泵"]
+    target_property: "消防水泵流量扬程标注"
+    keywords: ["消防水泵", "流量", "扬程", "水泵参数"]
+    suggestion_template: "消防水泵的流量和扬程参数未在设计图中标注，请按GB50974-2014 5.1.6条补标"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 16. 排水检查井最大间距检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-016
+    name: 排水检查井最大间距检查
+    description: 检查室外排水管道检查井最大间距是否满足规范要求
+    discipline: plumbing
+    check_type: dimension_max
+    route: text
+    severity: B
+    priority: 70
+    standard_code: GB50015-2019
+    standard_clause: "4.10.3"
+    clause_text: "室外生活排水管道检查井最大间距应符合：管径150mm时最大间距20m；管径200mm~300mm时最大间距30m；管径400mm时最大间距40m"
+    target_object: ["排水检查井", "检查井", "污水检查井"]
+    target_property: "检查井间距"
+    operator: "<="
+    limit_value: 40
+    unit: m
+    keywords: ["检查井", "排水检查井", "井间距"]
+    suggestion_template: "排水检查井间距超出规范限值，请按GB50015-2019 4.10.3条增设检查井"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 17. 中水管道标识要求检查 (D级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-017
+    name: 中水管道标识要求检查
+    description: 检查中水管道是否有明确标识，防止误接误用
+    discipline: plumbing
+    check_type: text_presence
+    route: text
+    severity: D
+    priority: 30
+    standard_code: GB50336-2018
+    standard_clause: "5.4.3"
+    clause_text: "中水管道外壁应按有关标准的规定涂色和标志，中水管道上不得装设取水龙头，且应有'非饮用水'等明确标识"
+    target_object: ["中水管道", "中水系统", "中水管"]
+    target_property: "中水管道标识"
+    keywords: ["中水", "非饮用水", "标识", "管道标识"]
+    suggestion_template: "中水管道未按GB50336-2018 5.4.3条要求设置'非饮用水'标识和涂色，请补设标识"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 18. 消防水箱最小有效容积检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-018
+    name: 消防水箱最小有效容积检查
+    description: 检查高位消防水箱最小有效容积是否满足初期火灾消防用水量要求
+    discipline: plumbing
+    check_type: dimension_min
+    route: text
+    severity: A
+    priority: 94
+    standard_code: GB50974-2014
+    standard_clause: "5.2.1"
+    clause_text: "临时高压消防给水系统的高位消防水箱有效容积：一类高层公共建筑不应小于36m³；多层公共建筑、二类高层公共建筑和一类高层住宅不应小于18m³；二类高层住宅不应小于12m³"
+    target_object: ["高位消防水箱", "消防水箱", "屋顶水箱"]
+    target_property: "消防水箱有效容积"
+    operator: ">="
+    limit_value: 18
+    unit: "m³"
+    keywords: ["消防水箱", "有效容积", "高位水箱", "初期火灾"]
+    suggestion_template: "高位消防水箱有效容积不满足GB50974-2014 5.2.1条要求，请根据建筑类型增加水箱容积"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 19. 给水管道水压试验压力检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-019
+    name: 给水管道水压试验压力检查
+    description: 检查给水管道水压试验压力值是否满足规范要求
+    discipline: plumbing
+    check_type: dimension_min
+    route: text
+    severity: C
+    priority: 50
+    standard_code: GB50268-2008
+    standard_clause: "9.2.6"
+    clause_text: "给水管道水压试验压力：工作压力P≤0.5MPa时试验压力为1.5P且≥0.6MPa；P＞0.5MPa时试验压力为P+0.5MPa"
+    target_object: ["给水管道", "水压试验", "给水管"]
+    target_property: "水压试验压力"
+    operator: ">="
+    limit_value: 0.6
+    unit: MPa
+    keywords: ["水压试验", "试验压力", "给水管道"]
+    suggestion_template: "给水管道水压试验压力标注不满足GB50268-2008 9.2.6条要求，请按规范要求标注试验压力值"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 20. 太阳能热水系统集热面积检查 (C级)
+  # ---------------------------------------------------------------------------
+  - id: PLUMB-020
+    name: 太阳能热水系统集热面积检查
+    description: 检查太阳能热水系统集热器总面积是否满足热水用量要求
+    discipline: plumbing
+    check_type: dimension_min
+    route: text
+    severity: C
+    priority: 45
+    standard_code: GB50015-2019
+    standard_clause: "6.5.3"
+    clause_text: "太阳能热水系统集热器总面积应根据热水用水量、当地太阳能年辐照量、集热器效率等参数计算确定，设计图中应标注集热面积"
+    target_object: ["太阳能集热器", "太阳能热水系统", "集热器"]
+    target_property: "集热器总面积"
+    operator: ">="
+    limit_value: 0
+    unit: "m²"
+    keywords: ["太阳能", "集热器", "集热面积", "热水系统"]
+    suggestion_template: "太阳能热水系统集热面积未标注或计算值不满足用水量要求，请按GB50015-2019 6.5.3条复核计算"
+    applicable_building_types: ["住宅建筑", "公共建筑"]

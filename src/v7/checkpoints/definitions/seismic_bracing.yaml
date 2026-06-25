@@ -1,0 +1,214 @@
+discipline: seismic_bracing
+description: 抗震支架专项检查点 - 10个高频检查项（GB50981强制标准）
+
+checkpoints:
+
+  # ============================================================================
+  # SEIS-001 ~ SEIS-010: 建筑机电抗震支架10个高频检查项
+  # 引用标准: GB50981-2014  建筑机电工程抗震设计规范（强制性国家标准）
+  #           适用范围：抗震设防烈度6度及以上地区的建筑机电工程
+  #           所有检查点均为A级（强条），因为GB50981全文强制
+  # ============================================================================
+
+  # ---------------------------------------------------------------------------
+  # 1. 抗震支架设置范围-管道类 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SEIS-001
+    name: 给排水/消防管道抗震支架设置范围检查
+    description: 检查DN65及以上管径的给排水和消防管道是否设置了抗震支吊架
+    discipline: seismic_bracing
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 100
+    standard_code: GB50981-2014
+    standard_clause: "3.1.6"
+    clause_text: "抗震设防烈度为6度及以上的地区，DN65及以上的给排水管道、消防管道应设置抗震支吊架"
+    target_object: ["给排水管道", "消防管道", "生活给水管", "消火栓管"]
+    target_property: "抗震支架设置"
+    keywords: ["抗震支架", "抗震支吊架", "DN65", "DN80", "DN100", "管道支架"]
+    suggestion_template: "DN65及以上管道未设置抗震支吊架，请按GB50981-2014 3.1.6条对所有≥DN65的管道补充抗震支架设计"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 2. 抗震支架设置范围-风管类 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SEIS-002
+    name: 暖通风管抗震支架设置范围检查
+    description: 检查截面积≥0.38㎡的暖通风管是否设置了抗震支吊架
+    discipline: seismic_bracing
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 99
+    standard_code: GB50981-2014
+    standard_clause: "3.1.6"
+    clause_text: "抗震设防烈度为6度及以上的地区，矩形截面面积≥0.38㎡或直径≥0.70m的通风空调管道应设置抗震支吊架"
+    target_object: ["风管", "通风管道", "空调风管", "排烟风管"]
+    target_property: "抗震支架设置"
+    keywords: ["风管", "抗震支架", "通风", "排烟", "截面", "尺寸"]
+    suggestion_template: "截面积≥0.38㎡的风管未设置抗震支吊架，请按GB50981-2014 3.1.6条补充"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 3. 抗震支架设置范围-电气桥架 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SEIS-003
+    name: 电气桥架抗震支架设置范围检查
+    description: 检查重量≥150N/m的电气桥架是否设置了抗震支吊架
+    discipline: seismic_bracing
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 98
+    standard_code: GB50981-2014
+    standard_clause: "3.1.6"
+    clause_text: "抗震设防烈度为6度及以上的地区，重量≥15kg/m的电缆桥架应设置抗震支吊架"
+    target_object: ["电缆桥架", "电气桥架", "线槽", "母线槽"]
+    target_property: "抗震支架设置"
+    keywords: ["桥架", "电缆", "母线", "抗震支架", "线槽"]
+    suggestion_template: "重量≥15kg/m的电缆桥架未设置抗震支吊架，请按GB50981-2014 3.1.6条补充"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 4. 抗震支架间距检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SEIS-004
+    name: 抗震支架最大间距检查
+    description: 检查抗震支吊架的水平间距是否满足规范限值
+    discipline: seismic_bracing
+    check_type: dimension_max
+    route: text
+    severity: A
+    priority: 96
+    standard_code: GB50981-2014
+    standard_clause: "8.2.3/表8.2.3"
+    clause_text: "水平管线侧向及纵向抗震支吊架间距应按公式计算，最大间距按表8.2.3确定：给排水管道侧向≤12m纵向≤24m，风管侧向≤9m纵向≤18m，桥架侧向≤12m纵向≤24m"
+    target_object: ["抗震支吊架", "抗震支架"]
+    target_property: "支架间距"
+    operator: "<="
+    limit_value: 6.0
+    unit: m
+    keywords: ["抗震支架间距", "间距", "侧向支架"]
+    suggestion_template: "抗震支架间距超过规定限值，请按GB50981-2014 8.2.3条根据管径调整支架间距"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 5. 抗震支吊架节点详图检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: SEIS-005
+    name: 抗震支吊架节点详图检查
+    description: 检查抗震支吊架的节点详图是否完整标注了生根点和连接方式
+    discipline: seismic_bracing
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 90
+    standard_code: GB50981-2014
+    standard_clause: "8.3.1"
+    clause_text: "每段水平直管道应在两端设置侧向抗震支吊架；抗震支吊架的构造应明确表示支架的形式、材料规格、连接方式、生根部位等"
+    target_object: ["抗震支吊架", "节点详图", "生根点"]
+    target_property: "节点详图标注"
+    keywords: ["抗震支架", "详图", "节点", "生根", "锚固", "连接"]
+    suggestion_template: "抗震支吊架节点详图不完整，请按GB50981-2014 8.3.1条补充支架形式、材料规格和生根详图"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 6. 抗震支架材料规格检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SEIS-006
+    name: 抗震支架材料规格检查
+    description: 检查抗震支吊架采用的材料和构件是否满足承载力要求
+    discipline: seismic_bracing
+    check_type: material_spec
+    route: text
+    severity: A
+    priority: 95
+    standard_code: GB50981-2014
+    standard_clause: "8.3.2"
+    clause_text: "当两个侧向抗震支吊架间距大于最大设计间距时，应在中间增设侧向抗震支吊架。锚栓应采用后扩底机械锚栓或模扩底机械锚栓"
+    target_object: ["抗震支架", "锚栓", "连接件"]
+    target_property: "材料规格"
+    keywords: ["抗震支架", "锚栓", "机械锚栓", "承载力", "钢型材"]
+    suggestion_template: "抗震支架材料规格不满足要求，请按GB50981-2014 8.3.2条选用符合强度要求的构件和锚栓"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 7. 管线纵向抗震支架设置检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SEIS-007
+    name: 纵向抗震支架设置检查
+    description: 检查除侧向支架外是否同时设置了纵向抗震支吊架
+    discipline: seismic_bracing
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 94
+    standard_code: GB50981-2014
+    standard_clause: "8.3.3"
+    clause_text: "每段水平直管道应至少设置一个纵向抗震支吊架；当两个纵向抗震支吊架距离大于最大设计间距时，应按本规范第8.2.3条规定依次增设纵向抗震支吊架"
+    target_object: ["纵向抗震支架", "纵向支架"]
+    target_property: "纵向支架设置"
+    keywords: ["纵向支架", "纵向抗震", "双向支架"]
+    suggestion_template: "仅设置侧向支架，缺少纵向抗震支吊架，请按GB50981-2014 8.2.4条补充纵向支架"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 8. 防排烟管道抗震支架专项检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SEIS-008
+    name: 防排烟管道抗震支架检查
+    description: 检查防排烟系统管道的抗震支吊架是否满足火灾时功能保持要求
+    discipline: seismic_bracing
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 97
+    standard_code: GB50981-2014
+    standard_clause: "5.1.4"
+    clause_text: "防排烟风道、事故通风风道及相关设备应采用抗震支吊架"
+    target_object: ["排烟管道", "防烟管道", "排烟风机", "加压送风"]
+    target_property: "抗震支架设置"
+    keywords: ["排烟", "防烟", "排烟风机", "加压送风", "消防风管"]
+    suggestion_template: "防排烟管道抗震支架不满足消防功能保持要求，请按GB50981-2014 5.1.1条加强设计"
+    applicable_building_types: ["全部"]
+
+  # ---------------------------------------------------------------------------
+  # 9. 高层建筑竖向管道抗震检查 (A级)
+  # ---------------------------------------------------------------------------
+  - id: SEIS-009
+    name: 高层建筑竖向管道抗震检查
+    description: 检查高层建筑竖井内的竖向管道是否按楼层设置了抗震支吊架
+    discipline: seismic_bracing
+    check_type: text_presence
+    route: text
+    severity: A
+    priority: 93
+    standard_code: GB50981-2014
+    standard_clause: "8.3.1/8.3.11"
+    clause_text: "建筑高度大于50m的建筑，竖向敷设的管道应在每层设置抗震支吊架；当立管长度大于7.6m时，应在中间加设抗震支吊架"
+    target_object: ["竖井管道", "竖向管道", "立管"]
+    target_property: "楼层抗震支架"
+    keywords: ["竖井", "立管", "竖向", "管井", "每层支架"]
+    suggestion_template: "高层建筑竖向管道未按每层设置抗震支架，请按GB50981-2014 8.2.1条逐层补充"
+    applicable_building_types: ["高层建筑", "超高层建筑"]
+
+  # ---------------------------------------------------------------------------
+  # 10. 抗震支架平面布置图完整性检查 (B级)
+  # ---------------------------------------------------------------------------
+  - id: SEIS-010
+    name: 抗震支架平面布置图检查
+    description: 检查抗震支吊架是否提供了独立的平面布置图和计算书
+    discipline: seismic_bracing
+    check_type: text_presence
+    route: text
+    severity: B
+    priority: 88
+    standard_code: GB50981-2014
+    standard_clause: "8.3.1/条文说明"
+    clause_text: "抗震支吊架的布置应根据建筑物结构形式和管道、桥架等布置情况确定，并应绘制抗震支吊架平面布置图和节点详图"
+    target_object: ["平面布置图", "计算书", "布置图"]
+    target_property: "布置图完整性"
+    keywords: ["布置图", "计算书", "平面", "抗震支架图"]
+    suggestion_template: "抗震支吊架缺少独立平面布置图或计算书，请按GB50981-2014 8.4.1条补充"
+    applicable_building_types: ["全部"]
